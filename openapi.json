@@ -1,0 +1,239 @@
+openapi: 3.0.0
+info:
+  title: Tree Sponsorship API
+  description: API for managing tree adoptions, forest plots, and sponsor transactions.
+  version: 1.0.0
+
+servers:
+  - url: https:localhost:8080/
+    description: Development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+paths:
+  # --- AUTH SERVICE ---
+  /auth/login:
+    post:
+      summary: User Login
+      tags: [Auth]
+      responses:
+        200:
+          description: Returns JWT token and user role.
+
+  /auth/register:
+    post:
+      summary: User Registration
+      tags: [Auth]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                full_name: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        201:
+          description: User registered successfully.
+          
+  # --- TREE & PLOT MANAGEMENT ---
+  /species:
+    get:
+      summary: List available tree species
+      tags: [Tree Management]
+      responses:
+        200:
+          description: A list of species.
+
+  /plots:
+    get:
+      summary: List forest plots
+      tags: [Tree Management]
+      responses:
+        200:
+          description: A list of plots with available space.
+
+  /plots/{id}:
+    get:
+      summary: Get plot details by ID
+      tags: [Tree Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        200:
+          description: Detailed information about the plot.
+        404:
+          description: Plot not found.
+
+  /admin/plots:
+    post:
+      summary: Create a new forest plot
+      security: [{ bearerAuth: [] }]
+      tags: [Tree Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                location: { type: string }
+                capacity: { type: integer }
+      responses:
+        201:
+          description: Plot created.
+
+  /admin/plots/{id}:
+    put:
+      summary: Update a forest plot
+      security: [{ bearerAuth: [] }]
+      tags: [Tree Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                location: { type: string }
+                capacity: { type: integer }
+      responses:
+        200:
+          description: Plot updated successfully.
+        404:
+          description: Plot not found.
+    delete:
+      summary: Delete a forest plot
+      security: [{ bearerAuth: [] }]
+      tags: [Tree Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        204:
+          description: Plot deleted successfully.
+        404:
+          description: Plot not found.
+
+  /trees/adopt:
+    post:
+      summary: Adopt a new tree
+      security: [{ bearerAuth: [] }]
+      tags: [Tree Management]
+      description: Logic checks balance. If insufficient, returns a payment link.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                species_id: { type: string, format: uuid }
+                plot_id: { type: string, format: uuid }
+                custom_name: { type: string }
+      responses:
+        201:
+          description: Tree adopted successfully.
+        402:
+          description: Payment Required (Balance low, Xendit invoice generated).
+
+  /trees/{id}/logs:
+    get:
+      summary: Get tree maintenance/growth logs
+      tags: [Tree Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        200:
+          description: List of growth and care logs.
+
+  # --- TRANSACTION & BALANCE ---
+  /wallet/topup:
+    post:
+      summary: Deposit funds to wallet
+      security: [{ bearerAuth: [] }]
+      tags: [Finance]
+      responses:
+        200:
+          description: Returns Xendit payment URL.
+
+  /wallet/webhook:
+    post:
+      summary: Xendit Payment Callback
+      tags: [Finance]
+      description: Updates sponsor balance upon successful payment.
+      responses:
+        200:
+          description: Webhook received.
+
+  /transaction/history:
+    get:
+      summary: View transaction history
+      security: [{ bearerAuth: [] }]
+      tags: [Finance]
+      responses:
+        200:
+          description: List of all financial movements.
+
+  /jobs/biweekly-maintenance:
+    post:
+      summary: Trigger biweekly care log creation
+      tags: [Tree Management]
+      responses:
+        200:
+          description: Logs generated for pending trees.
+
+  /notify/send-reminder:
+    post:
+      summary: Send expiration reminder
+      tags: [Notifier]
+      description: Internal endpoint used to trigger a "1-hour left" alert.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transaction_id: { type: string, format: uuid }
+                sponsor_email: { type: string }
+                payment_url: { type: string }
+      responses:
+        200:
+          description: Notification sent successfully.
+
+  /jobs/payment-expiry-check:
+    post:
+      summary: Scan for payments expiring in 1 hour
+      tags: [Finance]
+      description: >
+        Scheduled job (Cron) that finds transactions where status is PENDING 
+        and expiration is in T-60 minutes.
+      responses:
+        200:
+          description: Job completed; triggered reminders for matching transactions.
+        204:
+          description: No transactions currently requiring reminders.
