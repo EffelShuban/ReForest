@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package notifier;
+
+import "google/protobuf/empty.proto";
+
+service NotifierService {
+  rpc SendReminder(ReminderRequest) returns (google.protobuf.Empty);
+  rpc SendPaymentSuccess(PaymentSuccessRequest) returns (google.protobuf.Empty);
+}
+
+message ReminderRequest {
+  string transaction_id = 1;
+  string sponsor_email = 2;
+  string payment_url = 3;
+}
+
+message PaymentSuccessRequest {
+  string transaction_id = 1;
+  string sponsor_email = 2;
+  double amount = 3;
+}
