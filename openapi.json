@@ -52,6 +52,82 @@ paths:
         200:
           description: A list of species.
 
+  /species/{id}:
+    get:
+      summary: Get species details by ID
+      tags: [Tree Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        200:
+          description: Detailed information about the species.
+        404:
+          description: Species not found.
+
+  /admin/species:
+    post:
+      summary: Create a new tree species
+      security: [{ bearerAuth: [] }]
+      tags: [Tree Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                scientific_name: { type: string }
+                description: { type: string }
+                adoption_price: { type: number }
+      responses:
+        201:
+          description: Species created.
+
+  /admin/species/{id}:
+    put:
+      summary: Update a tree species
+      security: [{ bearerAuth: [] }]
+      tags: [Tree Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                scientific_name: { type: string }
+                description: { type: string }
+                adoption_price: { type: number }
+      responses:
+        200:
+          description: Species updated successfully.
+        404:
+          description: Species not found.
+    delete:
+      summary: Delete a tree species
+      security: [{ bearerAuth: [] }]
+      tags: [Tree Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        204:
+          description: Species deleted successfully.
+        404:
+          description: Species not found.
+
   /plots:
     get:
       summary: List forest plots
@@ -134,7 +210,13 @@ paths:
         404:
           description: Plot not found.
 
-  /trees/adopt:
+  /trees:
+    get:
+      summary: List all trees
+      tags: [Tree Management]
+      responses:
+        200:
+          description: List of all trees.
     post:
       summary: Adopt a new tree
       security: [{ bearerAuth: [] }]
@@ -156,6 +238,61 @@ paths:
         402:
           description: Payment Required (Balance low, Xendit invoice generated).
 
+  /trees/{id}:
+    get:
+      summary: Get tree details
+      tags: [Tree Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        200:
+          description: Tree details.
+        404:
+          description: Tree not found.
+    
+  /trees/admin/{id}:
+    put:
+      summary: Update tree details
+      security: [{ bearerAuth: [] }]
+      tags: [Tree Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                custom_name: { type: string }
+                species_id: { type: string, format: uuid }
+                plot_id: { type: string, format: uuid }
+      responses:
+        200:
+          description: Tree updated successfully.
+        404:
+          description: Tree not found.
+    delete:
+      summary: Delete a tree
+      security: [{ bearerAuth: [] }]
+      tags: [Tree Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        204:
+          description: Tree deleted successfully.
+        404:
+          description: Tree not found.
+
   /trees/{id}/logs:
     get:
       summary: Get tree maintenance/growth logs
@@ -168,8 +305,89 @@ paths:
       responses:
         200:
           description: List of growth and care logs.
+    post:
+      summary: Add a log entry for a tree
+      security: [{ bearerAuth: [] }]
+      tags: [Tree Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                image_url: { type: string }
+      responses:
+        201:
+          description: Log entry created.
+
+  /logs/{id}:
+    put:
+      summary: Update a log entry
+      security: [{ bearerAuth: [] }]
+      tags: [Tree Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                image_url: { type: string }
+      responses:
+        200:
+          description: Log updated successfully.
+        404:
+          description: Log not found.
+    delete:
+      summary: Delete a log entry
+      security: [{ bearerAuth: [] }]
+      tags: [Tree Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        204:
+          description: Log deleted successfully.
+        404:
+          description: Log not found.
 
   # --- TRANSACTION & BALANCE ---
+  /transactions:
+    post:
+      summary: Create a manual transaction
+      security: [{ bearerAuth: [] }]
+      tags: [Finance]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id: { type: string, format: uuid }
+                amount: { type: number }
+                type: { type: string, enum: ["DEPOSIT", "WITHDRAWAL", "PURCHASE"] }
+      responses:
+        201:
+          description: Transaction created.
+
   /wallet/topup:
     post:
       summary: Deposit funds to wallet
@@ -187,6 +405,21 @@ paths:
       responses:
         200:
           description: Webhook received.
+
+  /wallet/balance:
+    get:
+      summary: Get user's current wallet balance
+      security: [{ bearerAuth: [] }]
+      tags: [Finance]
+      responses:
+        200:
+          description: Current wallet balance.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  balance: { type: number }
 
   /transaction/history:
     get:
@@ -221,6 +454,26 @@ paths:
                 transaction_id: { type: string, format: uuid }
                 sponsor_email: { type: string }
                 payment_url: { type: string }
+      responses:
+        200:
+          description: Notification sent successfully.
+
+  /notify/payment-success:
+    post:
+      summary: Send payment success notification
+      tags: [Notifier]
+      description: Internal endpoint to notify user of successful payment.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                transaction_id: { type: string, format: uuid }
+                sponsor_email: { type: string }
+                amount: { type: number }
       responses:
         200:
           description: Notification sent successfully.
