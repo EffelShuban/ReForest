@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package finance;
 
+option go_package = "reforest/pkg/pb";
+
 import "google/protobuf/empty.proto";
 
 service FinanceService {
@@ -23,14 +25,14 @@ enum TransactionType {
 
 message TransactionRequest {
   string user_id = 1;
-  double amount = 2;
+  int64 amount = 2;
   TransactionType type = 3;
 }
 
 message Transaction {
   string id = 1;
   string user_id = 2;
-  double amount = 3;
+  int64 amount = 3;
   TransactionType type = 4;
   string status = 5;
 }
