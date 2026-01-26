@@ -27,13 +27,13 @@ erDiagram
 
     SPONSOR {
         uuid id PK "FK to User.id"
-        float balance "Current Wallet Credits"
+        int balance "Current Wallet Credits"
     }
 
     PAYMENT {
         uuid id PK
         uuid sponsor_id FK
-        float amount
+        int amount
         string status "Success/Pending/Failed"
         timestamp created_at
     }
@@ -42,7 +42,7 @@ erDiagram
         uuid id PK
         uuid sponsor_id FK
         uuid adopted_tree_id FK
-        float amount
+        int amount
         string type "ADOPTION | CARE"
         string payment_status "PENDING | FINISH | FAILED | EXPIRED"
         timestamp transaction_date

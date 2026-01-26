@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package tree;
+
+option go_package = "reforest/pkg/pb";
+
+import "google/protobuf/empty.proto";
+
+service TreeService {
+  // Species
+  rpc ListSpecies(google.protobuf.Empty) returns (SpeciesList);
+  rpc GetSpecies(IdRequest) returns (Species);
+  rpc CreateSpecies(Species) returns (Species);
+  rpc UpdateSpecies(Species) returns (Species);
+  rpc DeleteSpecies(IdRequest) returns (google.protobuf.Empty);
+
+  // Plots
+  rpc ListPlots(google.protobuf.Empty) returns (PlotList);
+  rpc GetPlot(IdRequest) returns (Plot);
+  rpc CreatePlot(Plot) returns (Plot);
+  rpc UpdatePlot(Plot) returns (Plot);
+  rpc DeletePlot(IdRequest) returns (google.protobuf.Empty);
+
+  // Trees
+  rpc ListTrees(google.protobuf.Empty) returns (TreeList);
+  rpc AdoptTree(AdoptTreeRequest) returns (AdoptTreeResponse);
+  rpc GetTree(IdRequest) returns (Tree);
+  rpc UpdateTree(Tree) returns (Tree);
+  rpc DeleteTree(IdRequest) returns (google.protobuf.Empty);
+
+  // Logs
+  rpc GetTreeLogs(IdRequest) returns (LogList);
+  rpc CreateLog(CreateLogRequest) returns (LogEntry);
+  rpc UpdateLog(LogEntry) returns (LogEntry);
+  rpc DeleteLog(IdRequest) returns (google.protobuf.Empty);
+
+  // Scheduled Jobs
+  rpc TriggerBiweeklyMaintenance(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
+message IdRequest { string id = 1; }
+
+message Species {
+  string id = 1;
+  string name = 2;
+  string scientific_name = 3;
+  string description = 4;
+  double adoption_price = 5;
+}
+
+message SpeciesList { repeated Species species = 1; }
+
+message Plot {
+  string id = 1;
+  string name = 2;
+  string location = 3;
+  int32 capacity = 4;
+}
+
+message PlotList { repeated Plot plots = 1; }
+
+message Tree {
+  string id = 1;
+  string species_id = 2;
+  string plot_id = 3;
+  string custom_name = 4;
+}
+
+message TreeList { repeated Tree trees = 1; }
+
+message AdoptTreeRequest {
+  string species_id = 1;
+  string plot_id = 2;
+  string custom_name = 3;
+}
+
+message AdoptTreeResponse {
+  string tree_id = 1;
+  string payment_url = 2; // Provided if balance is low (402 logic)
+}
+
+message LogEntry {
+  string id = 1;
+  string tree_id = 2;
+  string title = 3;
+  string description = 4;
+  string image_url = 5;
+}
+
+message CreateLogRequest {
+  string tree_id = 1;
+  string title = 2;
+  string description = 3;
+  string image_url = 4;
+}
+
+message LogList { repeated LogEntry logs = 1; }
