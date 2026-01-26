@@ -27,8 +27,3 @@ type Sponsor struct{
 	ID uuid.UUID `gorm:"type:uuid;primaryKey"`
 	Balance int `gorm:"default:0"`
 }
-
-type AuthClaims struct{
-	UserID uuid.UUID
-	Role string
-}

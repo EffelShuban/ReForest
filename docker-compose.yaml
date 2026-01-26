@@ -1,5 +1,5 @@
 services:
-  db:
+  postgres-db:
     image: postgres:15-alpine
     restart: always
     environment:
@@ -15,6 +15,20 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    container_name: postgres_db_reforest
+
+  mongo-db:
+    image: mongo:6.0
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+      MONGO_INITDB_DATABASE: reforest_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    container_name: mongo_db_reforest
 
   auth-service:
     build:
@@ -25,11 +39,26 @@ services:
     ports:
       - "50051:50051"
     environment:
-      - DB_DSN=host=db user=user password=password dbname=reforest_db port=5432 sslmode=disable
+      - DB_DSN=host=postgres-db user=user password=password dbname=reforest_db port=5432 sslmode=disable
       - JWT_SECRET=your-super-secret-key
     depends_on:
-      db:
+      postgres-db:
         condition: service_healthy
+
+  tree-management-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: tree-management-service # Assumes a multi-stage Dockerfile
+    restart: on-failure
+    ports:
+      - "50052:50052"
+    environment:
+      - MONGO_DSN=mongodb://root:password@mongo-db:27017/reforest_db?authSource=admin
+      - JWT_SECRET=your-super-secret-key
+      - TREE_GRPC_PORT=:50052
+    depends_on:
+      - mongo-db
 
   api-gateway:
     build:
@@ -42,9 +71,12 @@ services:
       - "8080:8080" # Assuming your API gateway listens on port 8080
     depends_on:
       - auth-service
+      - tree-management-service
     # You will need to add environment variables for the API gateway to connect to the auth service
     environment:
       - AUTH_SERVICE_URL=auth-service:50051
+      - TREE_MANAGEMENT_SERVICE_URL=tree-management-service:50052
 
 volumes:
   postgres_data:
+  mongo_data:

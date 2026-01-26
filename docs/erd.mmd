@@ -59,7 +59,7 @@ erDiagram
         uuid id PK
         string common_name
         float space_required_m2
-        float price
+        int price
     }
 
     ADOPTED_TREE {
@@ -69,7 +69,7 @@ erDiagram
         uuid plot_id FK
         string custom_name
         float initial_height_meters
-        float total_funded_lifetime "Sum of ADOPTION + CARE"
+        int total_funded_lifetime "Sum of donated money from Sponsor"
         timestamp last_care_date
         timestamp adopted_at
     }

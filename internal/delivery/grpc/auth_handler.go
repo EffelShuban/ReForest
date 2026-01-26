@@ -11,7 +11,6 @@ type AuthHandler struct {
 	authService service.AuthService
 }
 
-// NewAuthHandler now takes the service as a dependency
 func NewAuthHandler(authService service.AuthService) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
@@ -21,7 +20,7 @@ func NewAuthHandler(authService service.AuthService) *AuthHandler {
 func (h *AuthHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.AuthResponse, error) {
 	token, user, err := h.authService.Login(ctx, req)
 	if err != nil {
-		return nil, err // In production, map this to a gRPC status error
+		return nil, err
 	}
 
 	return &pb.AuthResponse{
