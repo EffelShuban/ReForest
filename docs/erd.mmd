@@ -1,0 +1,85 @@
+erDiagram
+    USER ||--o| ADMIN : "is a"
+    USER ||--o| SPONSOR : "is a"
+
+    SPONSOR ||--o{ PAYMENT : "deposits"
+    SPONSOR ||--o{ TRANSACTION : "executes"
+
+    SPONSOR ||--o{ ADOPTED_TREE : "owns"
+    FOREST_PLOT ||--o{ ADOPTED_TREE : "houses"
+    TREE_SPECIES ||--o{ ADOPTED_TREE : "defines"
+
+    ADMIN ||--o{ TREE_LOG : "verifies"
+    ADOPTED_TREE ||--o{ TREE_LOG : "tracks history"
+
+    USER {
+        uuid id PK
+        string email
+        string password_hash
+        string role_type "ADMIN | SPONSOR"
+    }
+
+    ADMIN {
+        uuid id PK "FK to User.id"
+        string employee_id
+        string access_level
+    }
+
+    SPONSOR {
+        uuid id PK "FK to User.id"
+        int balance "Current Wallet Credits"
+    }
+
+    PAYMENT {
+        uuid id PK
+        uuid sponsor_id FK
+        int amount
+        string status "Success/Pending/Failed"
+        timestamp created_at
+    }
+
+    TRANSACTION {
+        uuid id PK
+        uuid sponsor_id FK
+        uuid adopted_tree_id FK
+        int amount
+        string type "ADOPTION | CARE"
+        string payment_status "PENDING | FINISH | FAILED | EXPIRED"
+        timestamp transaction_date
+    }
+
+    FOREST_PLOT {
+        uuid id PK
+        string location_name
+        string address
+        float available_space_m2
+    }
+
+    TREE_SPECIES {
+        uuid id PK
+        string common_name
+        float space_required_m2
+        float price
+    }
+
+    ADOPTED_TREE {
+        uuid id PK
+        uuid sponsor_id FK
+        uuid species_id FK
+        uuid plot_id FK
+        string custom_name
+        float initial_height_meters
+        float total_funded_lifetime "Sum of ADOPTION + CARE"
+        timestamp last_care_date
+        timestamp adopted_at
+    }
+
+    TREE_LOG {
+        uuid id PK
+        uuid adopted_tree_id FK
+        uuid admin_id FK
+        float current_height_meters
+        string activity "Planting | Fertilizing | Pruning"
+        string note "Optional details about the care"
+        timestamp recorded_at
+    }
