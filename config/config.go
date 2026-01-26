@@ -1,22 +1,32 @@
 package config
 
-import (
-	"os"
-	"time"
-)
+import "os"
 
-type Config struct{
-	DBURL string
-	GRPCPort string
-	JWTSecret string
-	TokenExpiry time.Duration
+type Config struct {
+	DBDSN        string
+	JWTSecret    string
+	AuthGRPCPort string
 }
 
-func LoadConfig() *Config{
+func Load() *Config {
+	dsn := os.Getenv("DB_DSN")
+	if dsn == "" {
+		dsn = "host=localhost user=postgres password=postgres dbname=forest_guard port=5432 sslmode=disable"
+	}
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		jwtSecret = "default-secret-key"
+	}
+
+	authGrpcPort := os.Getenv("AUTH_GRPC_PORT")
+	if authGrpcPort == "" {
+		authGrpcPort = ":50051"
+	}
+
 	return &Config{
-		DBURL: os.Getenv("DATABASE_URL"),
-		GRPCPort: ":50051",
-		JWTSecret: os.Getenv("JWT_SECRET"),
-		TokenExpiry: time.Hour * 24,
+		DBDSN:        dsn,
+		JWTSecret:    jwtSecret,
+		AuthGRPCPort: authGrpcPort,
 	}
 }

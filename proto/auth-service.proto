@@ -15,7 +15,6 @@ enum Role{
 }
 
 message RegisterRequest {
-  string full_name = 1;
   string email = 2;
   string password = 3;
   Role role = 4;

@@ -69,7 +69,6 @@ func (Role) EnumDescriptor() ([]byte, []int) {
 
 type RegisterRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	FullName      string                 `protobuf:"bytes,1,opt,name=full_name,json=fullName,proto3" json:"full_name,omitempty"`
 	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
 	Password      string                 `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"`
 	Role          Role                   `protobuf:"varint,4,opt,name=role,proto3,enum=auth.Role" json:"role,omitempty"`
@@ -105,13 +104,6 @@ func (x *RegisterRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use RegisterRequest.ProtoReflect.Descriptor instead.
 func (*RegisterRequest) Descriptor() ([]byte, []int) {
 	return file_proto_auth_service_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *RegisterRequest) GetFullName() string {
-	if x != nil {
-		return x.FullName
-	}
-	return ""
 }
 
 func (x *RegisterRequest) GetEmail() string {
@@ -295,9 +287,8 @@ var File_proto_auth_service_proto protoreflect.FileDescriptor
 
 const file_proto_auth_service_proto_rawDesc = "" +
 	"\n" +
-	"\x18proto/auth-service.proto\x12\x04auth\"\x80\x01\n" +
-	"\x0fRegisterRequest\x12\x1b\n" +
-	"\tfull_name\x18\x01 \x01(\tR\bfullName\x12\x14\n" +
+	"\x18proto/auth-service.proto\x12\x04auth\"c\n" +
+	"\x0fRegisterRequest\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +
 	"\bpassword\x18\x03 \x01(\tR\bpassword\x12\x1e\n" +
 	"\x04role\x18\x04 \x01(\x0e2\n" +

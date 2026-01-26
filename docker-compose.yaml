@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:15-alpine
+    restart: always
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
@@ -10,7 +11,40 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d book_management"]
+      test: ["CMD-SHELL", "pg_isready -U user -d reforest_db"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: auth-service # Assumes a multi-stage Dockerfile with a stage named 'auth-service'
+    restart: on-failure
+    ports:
+      - "50051:50051"
+    environment:
+      - DB_DSN=host=db user=user password=password dbname=reforest_db port=5432 sslmode=disable
+      - JWT_SECRET=your-super-secret-key
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api-gateway:
+    build:
+      context: .
+      # Assumes a Dockerfile in your project root that can build the api gateway
+      dockerfile: Dockerfile
+      target: api-gateway # Assumes a multi-stage Dockerfile with a stage named 'api-gateway'
+    restart: on-failure
+    ports:
+      - "8080:8080" # Assuming your API gateway listens on port 8080
+    depends_on:
+      - auth-service
+    # You will need to add environment variables for the API gateway to connect to the auth service
+    environment:
+      - AUTH_SERVICE_URL=auth-service:50051
+
+volumes:
+  postgres_data:

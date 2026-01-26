@@ -8,6 +8,7 @@ import (
 	"reforest/pkg/pb"
 	"reforest/pkg/utils"
 	"golang.org/x/crypto/bcrypt"
+	"github.com/google/uuid"
 )
 
 type AuthService interface{
@@ -30,10 +31,12 @@ func NewAuthService(repo repository.AuthRepository, jwt *utils.JWTProvider) Auth
 func (s *authService) Register(ctx context.Context, req *pb.RegisterRequest) (*models.User, error) {
     hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 
+    newID := uuid.New()
     user := &models.User{
+        ID:           newID,
         Email:        req.Email,
         PasswordHash: string(hashedPassword),
-        RoleType:     req.Role.String(), // "ADMIN" or "SPONSOR"
+        RoleType:     req.Role.String(),
     }
 
     return s.repo.CreateUserWithRole(ctx, user)
@@ -49,7 +52,6 @@ func (s *authService) Login(ctx context.Context, req *pb.LoginRequest) (string, 
 		return "", nil, errors.New("invalid credentials")
 	}
 
-	// Use the utility!
 	token, err := s.jwtProvider.GenerateToken(user.ID, user.RoleType)
 	return token, user, err
 }
