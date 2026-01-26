@@ -5,6 +5,7 @@ package tree;
 option go_package = "reforest/pkg/pb";
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
 
 service TreeService {
   // Species
@@ -42,28 +43,32 @@ message IdRequest { string id = 1; }
 
 message Species {
   string id = 1;
-  string name = 2;
-  string scientific_name = 3;
-  string description = 4;
-  double adoption_price = 5;
+  string common_name = 2;
+  float space_required_m2 = 3;
+  int32 price = 4;
 }
 
 message SpeciesList { repeated Species species = 1; }
 
 message Plot {
   string id = 1;
-  string name = 2;
-  string location = 3;
-  int32 capacity = 4;
+  string location_name = 2;
+  string address = 3;
+  float available_space_m2 = 4;
 }
 
 message PlotList { repeated Plot plots = 1; }
 
 message Tree {
   string id = 1;
-  string species_id = 2;
-  string plot_id = 3;
-  string custom_name = 4;
+  string sponsor_id = 2;
+  string species_id = 3;
+  string plot_id = 4;
+  string custom_name = 5;
+  float initial_height_meters = 6;
+  int32 total_funded_lifetime = 7;
+  google.protobuf.Timestamp last_care_date = 8;
+  google.protobuf.Timestamp adopted_at = 9;
 }
 
 message TreeList { repeated Tree trees = 1; }
@@ -81,17 +86,19 @@ message AdoptTreeResponse {
 
 message LogEntry {
   string id = 1;
-  string tree_id = 2;
-  string title = 3;
-  string description = 4;
-  string image_url = 5;
+  string adopted_tree_id = 2;
+  string admin_id = 3;
+  float current_height_meters = 4;
+  string activity = 5;
+  string note = 6;
+  google.protobuf.Timestamp recorded_at = 7;
 }
 
 message CreateLogRequest {
-  string tree_id = 1;
-  string title = 2;
-  string description = 3;
-  string image_url = 4;
+  string adopted_tree_id = 1;
+  float current_height_meters = 2;
+  string activity = 3;
+  string note = 4;
 }
 
 message LogList { repeated LogEntry logs = 1; }
