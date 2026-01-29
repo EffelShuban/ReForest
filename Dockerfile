@@ -11,6 +11,7 @@ COPY . .
 
 RUN go build -o /bin/auth-service ./cmd/auth
 RUN go build -o /bin/api-gateway ./cmd/api
+RUN go build -o /bin/tree-management-service ./cmd/tree-management
 
 FROM alpine:latest AS auth-service
 WORKDIR /root/
@@ -23,3 +24,9 @@ WORKDIR /root/
 COPY --from=builder /bin/api-gateway .
 EXPOSE 8080
 CMD ["./api-gateway"]
+
+FROM alpine:latest AS tree-management-service
+WORKDIR /root/
+COPY --from=builder /bin/tree-management-service .
+EXPOSE 50052
+CMD ["./tree-management-service"]

@@ -57,9 +57,11 @@ func main() {
 
 	r.POST("/auth/register", func(c *gin.Context) {
 		var body struct {
-			Email    string `json:"email" binding:"required,email"`
-			Password string `json:"password" binding:"required,min=6"`
-			Role     string `json:"role" binding:"required"` // Expecting "ADMIN" or "SPONSOR"
+			Email       string `json:"email" binding:"required,email"`
+			Password    string `json:"password" binding:"required,min=6"`
+			Role        string `json:"role" binding:"required"` // Expecting "ADMIN" or "SPONSOR"
+			FullName    string `json:"full_name"`
+			DateOfBirth string `json:"date_of_birth"`
 		}
 
 		if err := c.ShouldBindJSON(&body); err != nil {
@@ -67,21 +69,21 @@ func main() {
 			return
 		}
 
-		var role pb.Role
+		// Validate role is one of the allowed types from ERD
 		switch strings.ToUpper(body.Role) {
-		case "ADMIN":
-			role = pb.Role_ADMIN
-		case "SPONSOR":
-			role = pb.Role_SPONSOR
-		default:
+		case "ADMIN", "SPONSOR":
+			// valid
+		default: 
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role, must be ADMIN or SPONSOR"})
 			return
 		}
 
 		res, err := authClient.Register(context.Background(), &pb.RegisterRequest{
-			Email:    body.Email,
-			Password: body.Password,
-			Role:     role,
+			Email:       body.Email,
+			Password:    body.Password,
+			RoleType:    strings.ToUpper(body.Role),
+			FullName:    body.FullName,
+			DateOfBirth: body.DateOfBirth,
 		})
 
 		if err != nil {

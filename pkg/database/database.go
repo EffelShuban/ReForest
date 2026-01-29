@@ -17,7 +17,7 @@ func NewConnection(dsn string) *gorm.DB {
 	}
 
 	log.Println("Running migrations...")
-	if err := db.AutoMigrate(&models.User{}, &models.Admin{}, &models.Sponsor{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.Profile{}); err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
 
