@@ -9,15 +9,26 @@ service AuthService {
   rpc Register(RegisterRequest) returns (RegisterResponse);
 }
 
-enum Role{
-  SPONSOR = 0;
-  ADMIN = 1;
+message User {
+  string id = 1;
+  string email = 2;
+  string role_type = 3;
+}
+
+message Profile {
+  string id = 1;
+  string full_name = 2;
+  string date_of_birth = 3;
+  int32 age = 4;
+  int32 balance = 5;
 }
 
 message RegisterRequest {
-  string email = 2;
-  string password = 3;
-  Role role = 4;
+  string email = 1;
+  string password = 2;
+  string role_type = 3;
+  string full_name = 4;
+  string date_of_birth = 5;
 }
 
 message RegisterResponse {

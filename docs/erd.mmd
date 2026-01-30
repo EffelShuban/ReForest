@@ -1,16 +1,16 @@
 erDiagram
-    USER ||--o| ADMIN : "is a"
-    USER ||--o| SPONSOR : "is a"
-
-    SPONSOR ||--o{ PAYMENT : "deposits"
-    SPONSOR ||--o{ TRANSACTION : "executes"
-
-    SPONSOR ||--o{ ADOPTED_TREE : "owns"
-    FOREST_PLOT ||--o{ ADOPTED_TREE : "houses"
-    TREE_SPECIES ||--o{ ADOPTED_TREE : "defines"
-
-    ADMIN ||--o{ TREE_LOG : "verifies"
-    ADOPTED_TREE ||--o{ TREE_LOG : "tracks history"
+    USER ||--o| PROFILE : "has"
+    USER ||--o{ ADOPTED_TREE : "(sponsor) owns"
+    USER ||--o{ TREE_LOG : "(admin) create"
+    
+    PROFILE ||--o{ TRANSACTION : "executes"
+    
+    TRANSACTION ||--o| PAYMENT : "generates"
+    TRANSACTION }o--|| ADOPTED_TREE : "targets"
+    
+    ADOPTED_TREE }o--|| TREE_SPECIES : "is species"
+    ADOPTED_TREE }o--|| FOREST_PLOT : "planted in"
+    ADOPTED_TREE ||--o{ TREE_LOG : "has history"
 
     USER {
         uuid id PK
@@ -19,32 +19,29 @@ erDiagram
         string role_type "ADMIN | SPONSOR"
     }
 
-    ADMIN {
+    PROFILE {
         uuid id PK "FK to User.id"
-        string employee_id
-        string access_level
-    }
-
-    SPONSOR {
-        uuid id PK "FK to User.id"
-        int balance "Current Wallet Credits"
+        string full_name
+        date date_of_birth
+        int age
+        int balance
     }
 
     PAYMENT {
         uuid id PK
-        uuid sponsor_id FK
+        uuid transaction_id FK
         int amount
-        string status "Success/Pending/Failed"
+        string status "PENDING | FINISHED | FAILED | EXPIRED"
+        string external_id
         timestamp created_at
     }
 
     TRANSACTION {
         uuid id PK
-        uuid sponsor_id FK
+        uuid profile_id FK
         uuid adopted_tree_id FK
         int amount
-        string type "ADOPTION | CARE"
-        string payment_status "PENDING | FINISH | FAILED | EXPIRED"
+        string type
         timestamp transaction_date
     }
 
@@ -59,17 +56,16 @@ erDiagram
         uuid id PK
         string common_name
         float space_required_m2
-        float price
+        int price
     }
 
     ADOPTED_TREE {
         uuid id PK
-        uuid sponsor_id FK
+        uuid user_id FK
         uuid species_id FK
         uuid plot_id FK
         string custom_name
         float initial_height_meters
-        float total_funded_lifetime "Sum of ADOPTION + CARE"
         timestamp last_care_date
         timestamp adopted_at
     }
@@ -79,7 +75,7 @@ erDiagram
         uuid adopted_tree_id FK
         uuid admin_id FK
         float current_height_meters
-        string activity "Planting | Fertilizing | Pruning"
-        string note "Optional details about the care"
-        timestamp recorded_at
+        string activity
+        string note
+        timestamp created_at
     }

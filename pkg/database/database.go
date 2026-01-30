@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// NewConnection establishes a connection to the database and runs migrations.
 func NewConnection(dsn string) *gorm.DB {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -17,7 +16,7 @@ func NewConnection(dsn string) *gorm.DB {
 	}
 
 	log.Println("Running migrations...")
-	if err := db.AutoMigrate(&models.User{}, &models.Admin{}, &models.Sponsor{}); err != nil {
+	if err := db.AutoMigrate(&models.User{}, &models.Profile{}); err != nil {
 		log.Fatalf("failed to migrate database: %v", err)
 	}
 

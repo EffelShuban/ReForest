@@ -2,8 +2,13 @@ package grpc
 
 import (
 	"context"
+	"errors"
+	"reforest/internal/models"
 	"reforest/internal/service"
 	"reforest/pkg/pb"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type AuthHandler struct {
@@ -11,7 +16,6 @@ type AuthHandler struct {
 	authService service.AuthService
 }
 
-// NewAuthHandler now takes the service as a dependency
 func NewAuthHandler(authService service.AuthService) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
@@ -21,7 +25,10 @@ func NewAuthHandler(authService service.AuthService) *AuthHandler {
 func (h *AuthHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.AuthResponse, error) {
 	token, user, err := h.authService.Login(ctx, req)
 	if err != nil {
-		return nil, err // In production, map this to a gRPC status error
+		if errors.Is(err, models.ErrInvalidCredentials) {
+			return nil, status.Error(codes.Unauthenticated, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "login failed")
 	}
 
 	return &pb.AuthResponse{
@@ -33,7 +40,10 @@ func (h *AuthHandler) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Auth
 func (h *AuthHandler) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
 	user, err := h.authService.Register(ctx, req)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, models.ErrAlreadyExists) {
+			return nil, status.Error(codes.AlreadyExists, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "registration failed")
 	}
 
 	return &pb.RegisterResponse{
