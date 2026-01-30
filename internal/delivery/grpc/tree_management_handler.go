@@ -68,7 +68,6 @@ func mapLogToProto(l *models.LogEntry) *pb.LogEntry {
 	}
 }
 
-// --- Species Handlers ---
 
 func (h *TreeManagementHandler) CreateSpecies(ctx context.Context, req *pb.Species) (*pb.Species, error) {
 	createdSpecies, err := h.treeService.CreateSpecies(ctx, req)
@@ -127,7 +126,6 @@ func (h *TreeManagementHandler) DeleteSpecies(ctx context.Context, req *pb.IdReq
 	return &emptypb.Empty{}, nil
 }
 
-// --- Log Handlers ---
 
 func (h *TreeManagementHandler) GetTreeLogs(ctx context.Context, req *pb.IdRequest) (*pb.LogList, error) {
 	treeID, err := primitive.ObjectIDFromHex(req.GetId())
