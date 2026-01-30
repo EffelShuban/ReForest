@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"errors"
 	"reforest/internal/models"
 	"reforest/internal/repository"
 	"reforest/pkg/pb"
@@ -33,7 +32,7 @@ func NewAuthService(repo repository.AuthRepository, jwt *utils.JWTProvider) Auth
 func (s *authService) Register(ctx context.Context, req *pb.RegisterRequest) (*models.User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, models.ErrInternal
 	}
 
 	dob, _ := time.Parse("2006-01-02", req.DateOfBirth)
@@ -63,13 +62,16 @@ func (s *authService) Register(ctx context.Context, req *pb.RegisterRequest) (*m
 func (s *authService) Login(ctx context.Context, req *pb.LoginRequest) (string, *models.User, error) {
 	user, err := s.repo.GetByEmail(ctx, req.Email)
 	if err != nil {
-		return "", nil, errors.New("invalid credentials")
+		return "", nil, models.ErrInvalidCredentials
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
-		return "", nil, errors.New("invalid credentials")
+		return "", nil, models.ErrInvalidCredentials
 	}
 
 	token, err := s.jwtProvider.GenerateToken(user.ID, user.RoleType)
-	return token, user, err
+	if err != nil {
+		return "", nil, models.ErrInternal
+	}
+	return token, user, nil
 }
