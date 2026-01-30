@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// AuthClaims defines the structure of the JWT claims.
 type AuthClaims struct {
 	UserID uuid.UUID
 	Role   string

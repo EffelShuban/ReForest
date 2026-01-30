@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"reforest/internal/models"
 	"reforest/internal/service"
 	"reforest/pkg/pb"
@@ -10,6 +11,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -72,7 +74,10 @@ func mapLogToProto(l *models.LogEntry) *pb.LogEntry {
 func (h *TreeManagementHandler) CreateSpecies(ctx context.Context, req *pb.Species) (*pb.Species, error) {
 	createdSpecies, err := h.treeService.CreateSpecies(ctx, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create species: %v", err)
+		if errors.Is(err, models.ErrAlreadyExists) {
+			return nil, status.Error(codes.AlreadyExists, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "failed to create species")
 	}
 	return mapSpeciesToProto(createdSpecies), nil
 }
@@ -84,7 +89,7 @@ func (h *TreeManagementHandler) GetSpecies(ctx context.Context, req *pb.IdReques
 	}
 	species, err := h.treeService.GetSpecies(ctx, id)
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "species not found: %v", err)
+		return nil, status.Error(codes.NotFound, "species not found")
 	}
 	return mapSpeciesToProto(species), nil
 }
@@ -92,7 +97,7 @@ func (h *TreeManagementHandler) GetSpecies(ctx context.Context, req *pb.IdReques
 func (h *TreeManagementHandler) ListSpecies(ctx context.Context, _ *emptypb.Empty) (*pb.SpeciesList, error) {
 	speciesList, err := h.treeService.ListSpecies(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to list species: %v", err)
+		return nil, status.Error(codes.Internal, "failed to list species")
 	}
 
 	pbSpecies := make([]*pb.Species, len(speciesList))
@@ -110,7 +115,10 @@ func (h *TreeManagementHandler) UpdateSpecies(ctx context.Context, req *pb.Speci
 	}
 	updatedSpecies, err := h.treeService.UpdateSpecies(ctx, id, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to update species: %v", err)
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "failed to update species")
 	}
 	return mapSpeciesToProto(updatedSpecies), nil
 }
@@ -121,10 +129,18 @@ func (h *TreeManagementHandler) DeleteSpecies(ctx context.Context, req *pb.IdReq
 		return nil, status.Errorf(codes.InvalidArgument, "invalid ID format")
 	}
 	if err := h.treeService.DeleteSpecies(ctx, id); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to delete species: %v", err)
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "failed to delete species")
 	}
 	return &emptypb.Empty{}, nil
 }
+
+
+
+
+
 
 
 func (h *TreeManagementHandler) GetTreeLogs(ctx context.Context, req *pb.IdRequest) (*pb.LogList, error) {
@@ -135,7 +151,7 @@ func (h *TreeManagementHandler) GetTreeLogs(ctx context.Context, req *pb.IdReque
 
 	logs, err := h.treeService.GetLogsByTreeID(ctx, treeID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to fetch logs: %v", err)
+		return nil, status.Error(codes.Internal, "failed to fetch logs")
 	}
 
 	pbLogs := make([]*pb.LogEntry, len(logs))
@@ -147,13 +163,18 @@ func (h *TreeManagementHandler) GetTreeLogs(ctx context.Context, req *pb.IdReque
 }
 
 func (h *TreeManagementHandler) CreateLog(ctx context.Context, req *pb.CreateLogRequest) (*pb.LogEntry, error) {
-	// In a real application, you would extract the admin ID from the JWT token in the context.
-	// This is typically done in a gRPC interceptor.
-	adminID := "placeholder-admin-id" // TODO: Replace with actual admin ID from context
+	userID, ok := ctx.Value(userIDKey).(string)
+	if !ok {
+		return nil, status.Error(codes.Internal, "failed to extract admin ID from context")
+	}
+	adminID := userID
 
 	createdLog, err := h.treeService.CreateLog(ctx, req, adminID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create log: %v", err)
+		if errors.Is(err, models.ErrInvalidInput) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "failed to create log")
 	}
 
 	return mapLogToProto(createdLog), nil
@@ -167,7 +188,13 @@ func (h *TreeManagementHandler) UpdateLog(ctx context.Context, req *pb.LogEntry)
 
 	updatedLog, err := h.treeService.UpdateLog(ctx, id, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to update log: %v", err)
+		if errors.Is(err, models.ErrInvalidInput) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "failed to update log")
 	}
 
 	return mapLogToProto(updatedLog), nil
@@ -180,18 +207,23 @@ func (h *TreeManagementHandler) DeleteLog(ctx context.Context, req *pb.IdRequest
 	}
 
 	if err := h.treeService.DeleteLog(ctx, id); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to delete log: %v", err)
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "failed to delete log")
 	}
 
 	return &emptypb.Empty{}, nil
 }
 
-// --- Plot Handlers ---
 
 func (h *TreeManagementHandler) CreatePlot(ctx context.Context, req *pb.Plot) (*pb.Plot, error) {
 	createdPlot, err := h.treeService.CreatePlot(ctx, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create plot: %v", err)
+		if errors.Is(err, models.ErrAlreadyExists) {
+			return nil, status.Error(codes.AlreadyExists, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "failed to create plot")
 	}
 	return mapPlotToProto(createdPlot), nil
 }
@@ -203,7 +235,7 @@ func (h *TreeManagementHandler) GetPlot(ctx context.Context, req *pb.IdRequest) 
 	}
 	plot, err := h.treeService.GetPlot(ctx, id)
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "plot not found: %v", err)
+		return nil, status.Error(codes.NotFound, "plot not found")
 	}
 	return mapPlotToProto(plot), nil
 }
@@ -211,7 +243,7 @@ func (h *TreeManagementHandler) GetPlot(ctx context.Context, req *pb.IdRequest) 
 func (h *TreeManagementHandler) ListPlots(ctx context.Context, _ *emptypb.Empty) (*pb.PlotList, error) {
 	plotList, err := h.treeService.ListPlots(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to list plots: %v", err)
+		return nil, status.Error(codes.Internal, "failed to list plots")
 	}
 
 	pbPlots := make([]*pb.Plot, len(plotList))
@@ -231,7 +263,10 @@ func (h *TreeManagementHandler) UpdatePlot(ctx context.Context, req *pb.Plot) (*
 	}
 	updatedPlot, err := h.treeService.UpdatePlot(ctx, id, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to update plot: %v", err)
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "failed to update plot")
 	}
 	return mapPlotToProto(updatedPlot), nil
 }
@@ -242,17 +277,19 @@ func (h *TreeManagementHandler) DeletePlot(ctx context.Context, req *pb.IdReques
 		return nil, status.Errorf(codes.InvalidArgument, "invalid ID format")
 	}
 	if err := h.treeService.DeletePlot(ctx, id); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to delete plot: %v", err)
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "failed to delete plot")
 	}
 	return &emptypb.Empty{}, nil
 }
 
-// --- Tree Handlers ---
 
 func (h *TreeManagementHandler) ListTrees(ctx context.Context, _ *emptypb.Empty) (*pb.TreeList, error) {
 	treeList, err := h.treeService.ListTrees(ctx)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to list trees: %v", err)
+		return nil, status.Error(codes.Internal, "failed to list trees")
 	}
 
 	pbTrees := make([]*pb.Tree, len(treeList))
@@ -264,20 +301,25 @@ func (h *TreeManagementHandler) ListTrees(ctx context.Context, _ *emptypb.Empty)
 }
 
 func (h *TreeManagementHandler) AdoptTree(ctx context.Context, req *pb.AdoptTreeRequest) (*pb.AdoptTreeResponse, error) {
-	// In a real application, you would extract the sponsor ID from the JWT token in the context.
-	// For now, we'll use a placeholder.
-	sponsorID := "placeholder-sponsor-id" // TODO: Replace with actual sponsor ID from context
+	userID, ok := ctx.Value(userIDKey).(string)
+	if !ok {
+		return nil, status.Error(codes.Internal, "failed to extract user ID from context")
+	}
+	sponsorID := userID
 
 	tree, err := h.treeService.AdoptTree(ctx, req, sponsorID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to adopt tree: %v", err)
+		if errors.Is(err, models.ErrInvalidInput) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "failed to adopt tree")
 	}
 
 	return &pb.AdoptTreeResponse{
 		TreeId: tree.ID.Hex(),
-		// PaymentUrl is part of the response but the logic for it might be handled
-		// in a separate payment service or based on the sponsor's balance.
-		// Leaving it empty for now.
+		/*PaymentUrl is part of the response but the logic for it might be handled
+		in a separate payment service or based on the sponsor's balance.
+		Leaving it empty for now.*/
 		PaymentUrl: "",
 	}, nil
 }
@@ -289,7 +331,7 @@ func (h *TreeManagementHandler) GetTree(ctx context.Context, req *pb.IdRequest) 
 	}
 	tree, err := h.treeService.GetTree(ctx, id)
 	if err != nil {
-		return nil, status.Errorf(codes.NotFound, "tree not found: %v", err)
+		return nil, status.Error(codes.NotFound, "tree not found")
 	}
 	return mapTreeToProto(tree), nil
 }
@@ -301,7 +343,13 @@ func (h *TreeManagementHandler) UpdateTree(ctx context.Context, req *pb.Tree) (*
 	}
 	updatedTree, err := h.treeService.UpdateTree(ctx, id, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to update tree: %v", err)
+		if errors.Is(err, models.ErrInvalidInput) {
+			return nil, status.Error(codes.InvalidArgument, err.Error())
+		}
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "failed to update tree")
 	}
 	return mapTreeToProto(updatedTree), nil
 }
@@ -312,7 +360,10 @@ func (h *TreeManagementHandler) DeleteTree(ctx context.Context, req *pb.IdReques
 		return nil, status.Errorf(codes.InvalidArgument, "invalid ID format")
 	}
 	if err := h.treeService.DeleteTree(ctx, id); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to delete tree: %v", err)
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, status.Error(codes.Internal, "failed to delete tree")
 	}
 	return &emptypb.Empty{}, nil
 }

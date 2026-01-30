@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// NewConnection establishes a connection to the database and runs migrations.
 func NewConnection(dsn string) *gorm.DB {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {

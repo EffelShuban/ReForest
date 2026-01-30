@@ -108,11 +108,11 @@ func (s *treeManagementService) DeletePlot(ctx context.Context, id primitive.Obj
 func (s *treeManagementService) AdoptTree(ctx context.Context, req *pb.AdoptTreeRequest, sponsorID string) (*models.Tree, error) {
 	speciesID, err := primitive.ObjectIDFromHex(req.SpeciesId)
 	if err != nil {
-		return nil, err
+		return nil, models.ErrInvalidInput
 	}
 	plotID, err := primitive.ObjectIDFromHex(req.PlotId)
 	if err != nil {
-		return nil, err
+		return nil, models.ErrInvalidInput
 	}
 
 	tree := &models.Tree{
@@ -139,11 +139,11 @@ func (s *treeManagementService) ListTrees(ctx context.Context) ([]*models.Tree, 
 func (s *treeManagementService) UpdateTree(ctx context.Context, id primitive.ObjectID, req *pb.Tree) (*models.Tree, error) {
 	speciesID, err := primitive.ObjectIDFromHex(req.SpeciesId)
 	if err != nil {
-		return nil, err
+		return nil, models.ErrInvalidInput
 	}
 	plotID, err := primitive.ObjectIDFromHex(req.PlotId)
 	if err != nil {
-		return nil, err
+		return nil, models.ErrInvalidInput
 	}
 
 	tree := &models.Tree{
@@ -167,7 +167,7 @@ func (s *treeManagementService) DeleteTree(ctx context.Context, id primitive.Obj
 func (s *treeManagementService) CreateLog(ctx context.Context, req *pb.CreateLogRequest, adminID string) (*models.LogEntry, error) {
 	treeID, err := primitive.ObjectIDFromHex(req.AdoptedTreeId)
 	if err != nil {
-		return nil, err
+		return nil, models.ErrInvalidInput
 	}
 
 	log := &models.LogEntry{
@@ -188,7 +188,7 @@ func (s *treeManagementService) GetLogsByTreeID(ctx context.Context, treeID prim
 func (s *treeManagementService) UpdateLog(ctx context.Context, id primitive.ObjectID, req *pb.LogEntry) (*models.LogEntry, error) {
 	treeID, err := primitive.ObjectIDFromHex(req.AdoptedTreeId)
 	if err != nil {
-		return nil, err
+		return nil, models.ErrInvalidInput
 	}
 
 	log := &models.LogEntry{

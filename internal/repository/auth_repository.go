@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"reforest/internal/models"
 
 	"gorm.io/gorm"
@@ -23,6 +24,9 @@ func NewAuthRepository(db *gorm.DB) AuthRepository {
 func (r *authRepository) CreateUser(ctx context.Context, user *models.User) (*models.User, error) {
 	err := r.db.WithContext(ctx).Create(user).Error
 	if err != nil {
+		if errors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, models.ErrAlreadyExists
+		}
 		return nil, err
 	}
 	return user, nil

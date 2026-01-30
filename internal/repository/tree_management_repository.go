@@ -53,6 +53,9 @@ func NewTreeManagementRepository(db *mongo.Database) TreeManagementRepository {
 func (r *treeManagementRepository) CreateSpecies(ctx context.Context, species *models.Species) (*models.Species, error) {
 	res, err := r.db.Collection(speciesCollection).InsertOne(ctx, species)
 	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return nil, models.ErrAlreadyExists
+		}
 		return nil, err
 	}
 	species.ID = res.InsertedID.(primitive.ObjectID)
@@ -63,6 +66,9 @@ func (r *treeManagementRepository) GetSpecies(ctx context.Context, id primitive.
 	var species models.Species
 	err := r.db.Collection(speciesCollection).FindOne(ctx, bson.M{"_id": id}).Decode(&species)
 	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, models.ErrNotFound
+		}
 		return nil, err
 	}
 	return &species, nil
@@ -90,9 +96,15 @@ func (r *treeManagementRepository) UpdateSpecies(ctx context.Context, species *m
 			"price":             species.Price,
 		},
 	}
-	_, err := r.db.Collection(speciesCollection).UpdateOne(ctx, bson.M{"_id": species.ID}, update)
+	res, err := r.db.Collection(speciesCollection).UpdateOne(ctx, bson.M{"_id": species.ID}, update)
 	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return nil, models.ErrAlreadyExists
+		}
 		return nil, err
+	}
+	if res.MatchedCount == 0 {
+		return nil, models.ErrNotFound
 	}
 	return r.GetSpecies(ctx, species.ID)
 }
@@ -103,7 +115,7 @@ func (r *treeManagementRepository) DeleteSpecies(ctx context.Context, id primiti
 		return err
 	}
 	if res.DeletedCount == 0 {
-		return errors.New("species not found")
+		return models.ErrNotFound
 	}
 	return nil
 }
@@ -111,6 +123,9 @@ func (r *treeManagementRepository) DeleteSpecies(ctx context.Context, id primiti
 func (r *treeManagementRepository) CreatePlot(ctx context.Context, plot *models.Plot) (*models.Plot, error) {
 	res, err := r.db.Collection(plotCollection).InsertOne(ctx, plot)
 	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return nil, models.ErrAlreadyExists
+		}
 		return nil, err
 	}
 	plot.ID = res.InsertedID.(primitive.ObjectID)
@@ -121,6 +136,9 @@ func (r *treeManagementRepository) GetPlot(ctx context.Context, id primitive.Obj
 	var plot models.Plot
 	err := r.db.Collection(plotCollection).FindOne(ctx, bson.M{"_id": id}).Decode(&plot)
 	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, models.ErrNotFound
+		}
 		return nil, err
 	}
 	return &plot, nil
@@ -147,9 +165,15 @@ func (r *treeManagementRepository) UpdatePlot(ctx context.Context, plot *models.
 			"available_space_m2": plot.AvailableSpaceM2,
 		},
 	}
-	_, err := r.db.Collection(plotCollection).UpdateOne(ctx, bson.M{"_id": plot.ID}, update)
+	res, err := r.db.Collection(plotCollection).UpdateOne(ctx, bson.M{"_id": plot.ID}, update)
 	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return nil, models.ErrAlreadyExists
+		}
 		return nil, err
+	}
+	if res.MatchedCount == 0 {
+		return nil, models.ErrNotFound
 	}
 	return r.GetPlot(ctx, plot.ID)
 }
@@ -160,7 +184,7 @@ func (r *treeManagementRepository) DeletePlot(ctx context.Context, id primitive.
 		return err
 	}
 	if res.DeletedCount == 0 {
-		return errors.New("plot not found")
+		return models.ErrNotFound
 	}
 	return nil
 }
@@ -168,6 +192,9 @@ func (r *treeManagementRepository) DeletePlot(ctx context.Context, id primitive.
 func (r *treeManagementRepository) CreateTree(ctx context.Context, tree *models.Tree) (*models.Tree, error) {
 	res, err := r.db.Collection(treeCollection).InsertOne(ctx, tree)
 	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return nil, models.ErrAlreadyExists
+		}
 		return nil, err
 	}
 	tree.ID = res.InsertedID.(primitive.ObjectID)
@@ -178,6 +205,9 @@ func (r *treeManagementRepository) GetTree(ctx context.Context, id primitive.Obj
 	var tree models.Tree
 	err := r.db.Collection(treeCollection).FindOne(ctx, bson.M{"_id": id}).Decode(&tree)
 	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, models.ErrNotFound
+		}
 		return nil, err
 	}
 	return &tree, nil
@@ -209,9 +239,15 @@ func (r *treeManagementRepository) UpdateTree(ctx context.Context, tree *models.
 			"adopted_at":            tree.AdoptedAt,
 		},
 	}
-	_, err := r.db.Collection(treeCollection).UpdateOne(ctx, bson.M{"_id": tree.ID}, update)
+	res, err := r.db.Collection(treeCollection).UpdateOne(ctx, bson.M{"_id": tree.ID}, update)
 	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return nil, models.ErrAlreadyExists
+		}
 		return nil, err
+	}
+	if res.MatchedCount == 0 {
+		return nil, models.ErrNotFound
 	}
 	return r.GetTree(ctx, tree.ID)
 }
@@ -222,7 +258,7 @@ func (r *treeManagementRepository) DeleteTree(ctx context.Context, id primitive.
 		return err
 	}
 	if res.DeletedCount == 0 {
-		return errors.New("tree not found")
+		return models.ErrNotFound
 	}
 	return nil
 }
@@ -230,6 +266,9 @@ func (r *treeManagementRepository) DeleteTree(ctx context.Context, id primitive.
 func (r *treeManagementRepository) CreateLog(ctx context.Context, log *models.LogEntry) (*models.LogEntry, error) {
 	res, err := r.db.Collection(logCollection).InsertOne(ctx, log)
 	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return nil, models.ErrAlreadyExists
+		}
 		return nil, err
 	}
 	log.ID = res.InsertedID.(primitive.ObjectID)
@@ -260,9 +299,15 @@ func (r *treeManagementRepository) UpdateLog(ctx context.Context, log *models.Lo
 			"recorded_at":           log.RecordedAt,
 		},
 	}
-	_, err := r.db.Collection(logCollection).UpdateOne(ctx, bson.M{"_id": log.ID}, update)
+	res, err := r.db.Collection(logCollection).UpdateOne(ctx, bson.M{"_id": log.ID}, update)
 	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return nil, models.ErrAlreadyExists
+		}
 		return nil, err
+	}
+	if res.MatchedCount == 0 {
+		return nil, models.ErrNotFound
 	}
 	return log, nil
 }
@@ -273,7 +318,7 @@ func (r *treeManagementRepository) DeleteLog(ctx context.Context, id primitive.O
 		return err
 	}
 	if res.DeletedCount == 0 {
-		return errors.New("log not found")
+		return models.ErrNotFound
 	}
 	return nil
 }
