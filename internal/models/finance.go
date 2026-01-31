@@ -8,10 +8,8 @@ import (
 )
 
 type Wallet struct {
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
 	UserID    uuid.UUID `gorm:"type:uuid;uniqueIndex;not null"`
-	Balance   int64     `gorm:"default:0"` // Stored in smallest unit (e.g., cents)
-	UpdatedAt time.Time
+	Balance   int64     `gorm:"default:0"`
 }
 
 type Transaction struct {
