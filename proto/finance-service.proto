@@ -8,7 +8,7 @@ import "google/protobuf/empty.proto";
 
 service FinanceService {
   rpc CreateTransaction(TransactionRequest) returns (Transaction);
-  rpc TopUpWallet(google.protobuf.Empty) returns (PaymentUrlResponse);
+  rpc TopUpWallet(TopUpRequest) returns (PaymentUrlResponse);
   rpc HandleWalletWebhook(WebhookRequest) returns (google.protobuf.Empty);
   rpc GetBalance(google.protobuf.Empty) returns (BalanceResponse);
   rpc GetTransactionHistory(google.protobuf.Empty) returns (TransactionList);
@@ -27,6 +27,10 @@ message TransactionRequest {
   string user_id = 1;
   int64 amount = 2;
   TransactionType type = 3;
+}
+
+message TopUpRequest {
+  int64 amount = 1;
 }
 
 message Transaction {
