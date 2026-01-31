@@ -8,6 +8,8 @@ type Config struct {
 	JWTSecret    string
 	AuthGRPCPort string
 	TreeGRPCPort string
+	FinanceGRPCPort string
+	XenditAPIKey    string
 }
 
 func Load() *Config {
@@ -36,11 +38,23 @@ func Load() *Config {
 		treeGrpcPort = ":50052"
 	}
 
+	financeGrpcPort := os.Getenv("FINANCE_GRPC_PORT")
+	if financeGrpcPort == "" {
+		financeGrpcPort = ":50053"
+	}
+
+	xenditAPIKey := os.Getenv("XENDIT_API_KEY")
+	if xenditAPIKey == "" {
+		xenditAPIKey = "xnd_public_development_G3NFqweuzg_Ke9pjaBtZBSIExYCVP0yQA77ZeETSbcI_4yMx5MFc60MROYi0Je"
+	}
+
 	return &Config{
 		DBDSN:        dsn,
 		MongoDSN:     mongoDSN,
 		JWTSecret:    jwtSecret,
 		AuthGRPCPort: authGrpcPort,
 		TreeGRPCPort: treeGrpcPort,
+		FinanceGRPCPort: financeGrpcPort,
+		XenditAPIKey:    xenditAPIKey,
 	}
 }

@@ -52,6 +52,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/xendit/xendit-go/v6 v6.4.0
 	go.mongodb.org/mongo-driver v1.17.7
 	golang.org/x/crypto v0.47.0
 	golang.org/x/net v0.48.0 // indirect
