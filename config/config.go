@@ -3,11 +3,19 @@ package config
 import "os"
 
 type Config struct {
-	DBDSN        string
-	MongoDSN     string
-	JWTSecret    string
-	AuthGRPCPort string
-	TreeGRPCPort string
+	DBDSN                    string
+	MongoDSN                 string
+	JWTSecret                string
+	AuthGRPCPort             string
+	TreeGRPCPort             string
+	AuthServiceURL           string
+	TreeManagementServiceURL string
+
+	MailtrapHost string
+	MailtrapPort string
+	MailtrapUser string
+	MailtrapPass string
+	MailtrapFrom string
 }
 
 func Load() *Config {
@@ -36,11 +44,40 @@ func Load() *Config {
 		treeGrpcPort = ":50052"
 	}
 
+	authServiceURL := os.Getenv("AUTH_SERVICE_URL")
+	if authServiceURL == "" {
+		authServiceURL = "localhost:50051"
+	}
+
+	treeServiceURL := os.Getenv("TREE_MANAGEMENT_SERVICE_URL")
+	if treeServiceURL == "" {
+		treeServiceURL = "localhost:50052"
+	}
+
+	mailtrapHost := os.Getenv("MAILTRAP_HOST")
+	mailtrapPort := os.Getenv("MAILTRAP_PORT")
+	if mailtrapPort == "" {
+		mailtrapPort = "2525"
+	}
+	mailtrapUser := os.Getenv("MAILTRAP_USER")
+	mailtrapPass := os.Getenv("MAILTRAP_PASS")
+	mailtrapFrom := os.Getenv("MAILTRAP_FROM")
+	if mailtrapFrom == "" {
+		mailtrapFrom = "noreply@example.com"
+	}
+
 	return &Config{
-		DBDSN:        dsn,
-		MongoDSN:     mongoDSN,
-		JWTSecret:    jwtSecret,
-		AuthGRPCPort: authGrpcPort,
-		TreeGRPCPort: treeGrpcPort,
+		DBDSN:                    dsn,
+		MongoDSN:                 mongoDSN,
+		JWTSecret:                jwtSecret,
+		AuthGRPCPort:             authGrpcPort,
+		TreeGRPCPort:             treeGrpcPort,
+		AuthServiceURL:           authServiceURL,
+		TreeManagementServiceURL: treeServiceURL,
+		MailtrapHost:             mailtrapHost,
+		MailtrapPort:             mailtrapPort,
+		MailtrapUser:             mailtrapUser,
+		MailtrapPass:             mailtrapPass,
+		MailtrapFrom:             mailtrapFrom,
 	}
 }

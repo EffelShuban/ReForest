@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"google.golang.org/grpc/codes"
@@ -18,6 +17,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
+	"reforest/config"
 	"reforest/pkg/pb"
 )
 
@@ -53,11 +53,9 @@ func respondProto(c *gin.Context, code int, msg proto.Message) {
 }
 
 func main() {
-	authServiceUrl := os.Getenv("AUTH_SERVICE_URL")
-	if authServiceUrl == "" {
-		authServiceUrl = "localhost:50051"
-	}
-	conn, err := grpc.NewClient(authServiceUrl, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	cfg := config.Load()
+
+	conn, err := grpc.NewClient(cfg.AuthServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect to auth service: %v", err)
 	}
@@ -65,11 +63,7 @@ func main() {
 
 	authClient := pb.NewAuthServiceClient(conn)
 
-	treeMgmtServiceURL := os.Getenv("TREE_MANAGEMENT_SERVICE_URL")
-	if treeMgmtServiceURL == "" {
-		treeMgmtServiceURL = "localhost:50052"
-	}
-	treeConn, err := grpc.NewClient(treeMgmtServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	treeConn, err := grpc.NewClient(cfg.TreeManagementServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect to tree management service: %v", err)
 	}
@@ -103,7 +97,7 @@ func main() {
 		switch strings.ToUpper(body.Role) {
 		case "ADMIN", "SPONSOR":
 			// valid
-		default: 
+		default:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role, must be ADMIN or SPONSOR"})
 			return
 		}
