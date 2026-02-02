@@ -43,7 +43,7 @@ func (h *AuthHandler) Register(ctx context.Context, req *pb.RegisterRequest) (*p
 		if errors.Is(err, models.ErrAlreadyExists) {
 			return nil, status.Error(codes.AlreadyExists, err.Error())
 		}
-		return nil, status.Error(codes.Internal, "registration failed")
+		return nil, status.Errorf(codes.Internal, "registration failed: %v", err)
 	}
 
 	return &pb.RegisterResponse{

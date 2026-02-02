@@ -9,6 +9,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 
@@ -68,6 +69,24 @@ func mapLogToProto(l *models.LogEntry) *pb.LogEntry {
 		Note:                l.Note,
 		RecordedAt:          timestamppb.New(l.RecordedAt),
 	}
+}
+
+func (h *TreeManagementHandler) getUserID(ctx context.Context) (string, error) {
+	if userID, ok := ctx.Value(userIDKey).(string); ok && userID != "" {
+		return userID, nil
+	}
+
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", status.Error(codes.Unauthenticated, "metadata not found in context")
+	}
+
+	values := md.Get("x-user-id")
+	if len(values) == 0 || values[0] == "" {
+		return "", status.Error(codes.Unauthenticated, "user id not found in metadata")
+	}
+
+	return values[0], nil
 }
 
 
@@ -163,12 +182,10 @@ func (h *TreeManagementHandler) GetTreeLogs(ctx context.Context, req *pb.IdReque
 }
 
 func (h *TreeManagementHandler) CreateLog(ctx context.Context, req *pb.CreateLogRequest) (*pb.LogEntry, error) {
-	userID, ok := ctx.Value(userIDKey).(string)
-	if !ok {
-		return nil, status.Error(codes.Internal, "failed to extract admin ID from context")
+	adminID, err := h.getUserID(ctx)
+	if err != nil {
+		return nil, err
 	}
-	adminID := userID
-
 	createdLog, err := h.treeService.CreateLog(ctx, req, adminID)
 	if err != nil {
 		if errors.Is(err, models.ErrInvalidInput) {
@@ -301,12 +318,10 @@ func (h *TreeManagementHandler) ListTrees(ctx context.Context, _ *emptypb.Empty)
 }
 
 func (h *TreeManagementHandler) AdoptTree(ctx context.Context, req *pb.AdoptTreeRequest) (*pb.AdoptTreeResponse, error) {
-	userID, ok := ctx.Value(userIDKey).(string)
-	if !ok {
-		return nil, status.Error(codes.Internal, "failed to extract user ID from context")
+	sponsorID, err := h.getUserID(ctx)
+	if err != nil {
+		return nil, err
 	}
-	sponsorID := userID
-
 	tree, err := h.treeService.AdoptTree(ctx, req, sponsorID)
 	if err != nil {
 		if errors.Is(err, models.ErrInvalidInput) {

@@ -64,8 +64,12 @@ func main() {
 		"/tree.TreeService/TriggerBiweeklyMaintenance": true,
 	}
 
+	sponsorMethods := map[string]bool{
+		"/tree.TreeService/AdoptTree": true,
+	}
+
 	s := googleGrpc.NewServer(
-		googleGrpc.UnaryInterceptor(grpc.AuthInterceptor(jwtProvider, publicMethods, adminMethods)),
+		googleGrpc.UnaryInterceptor(grpc.AuthInterceptor(jwtProvider, publicMethods, adminMethods, sponsorMethods)),
 	)
 	pb.RegisterTreeServiceServer(s, treeHandler)
 

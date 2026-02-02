@@ -33,11 +33,10 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FinanceServiceClient interface {
 	CreateTransaction(ctx context.Context, in *TransactionRequest, opts ...grpc.CallOption) (*Transaction, error)
-	TopUpWallet(ctx context.Context, in *TopUpRequest, opts ...grpc.CallOption) (*PaymentUrlResponse, error)
+	TopUpWallet(ctx context.Context, in *TopUpRequest, opts ...grpc.CallOption) (*Transaction, error)
 	HandleWalletWebhook(ctx context.Context, in *WebhookRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetBalance(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BalanceResponse, error)
 	GetTransactionHistory(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*TransactionList, error)
-	// Scheduled Jobs
 	CheckPaymentExpiry(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
@@ -59,9 +58,9 @@ func (c *financeServiceClient) CreateTransaction(ctx context.Context, in *Transa
 	return out, nil
 }
 
-func (c *financeServiceClient) TopUpWallet(ctx context.Context, in *TopUpRequest, opts ...grpc.CallOption) (*PaymentUrlResponse, error) {
+func (c *financeServiceClient) TopUpWallet(ctx context.Context, in *TopUpRequest, opts ...grpc.CallOption) (*Transaction, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(PaymentUrlResponse)
+	out := new(Transaction)
 	err := c.cc.Invoke(ctx, FinanceService_TopUpWallet_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -114,11 +113,10 @@ func (c *financeServiceClient) CheckPaymentExpiry(ctx context.Context, in *empty
 // for forward compatibility.
 type FinanceServiceServer interface {
 	CreateTransaction(context.Context, *TransactionRequest) (*Transaction, error)
-	TopUpWallet(context.Context, *TopUpRequest) (*PaymentUrlResponse, error)
+	TopUpWallet(context.Context, *TopUpRequest) (*Transaction, error)
 	HandleWalletWebhook(context.Context, *WebhookRequest) (*emptypb.Empty, error)
 	GetBalance(context.Context, *emptypb.Empty) (*BalanceResponse, error)
 	GetTransactionHistory(context.Context, *emptypb.Empty) (*TransactionList, error)
-	// Scheduled Jobs
 	CheckPaymentExpiry(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	mustEmbedUnimplementedFinanceServiceServer()
 }
@@ -133,7 +131,7 @@ type UnimplementedFinanceServiceServer struct{}
 func (UnimplementedFinanceServiceServer) CreateTransaction(context.Context, *TransactionRequest) (*Transaction, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateTransaction not implemented")
 }
-func (UnimplementedFinanceServiceServer) TopUpWallet(context.Context, *TopUpRequest) (*PaymentUrlResponse, error) {
+func (UnimplementedFinanceServiceServer) TopUpWallet(context.Context, *TopUpRequest) (*Transaction, error) {
 	return nil, status.Error(codes.Unimplemented, "method TopUpWallet not implemented")
 }
 func (UnimplementedFinanceServiceServer) HandleWalletWebhook(context.Context, *WebhookRequest) (*emptypb.Empty, error) {

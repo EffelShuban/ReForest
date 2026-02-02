@@ -23,5 +23,5 @@ type Profile struct {
 	FullName    string    `gorm:"not null"`
 	DateOfBirth time.Time
 	Age         int
-	Balance     int `gorm:"default:0"`
+	Balance     int64 `gorm:"default:0"`
 }

@@ -4,23 +4,26 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"gorm.io/gorm"
 )
 
-type Wallet struct {
-	UserID    uuid.UUID `gorm:"type:uuid;uniqueIndex;not null"`
-	Balance   int64     `gorm:"default:0"`
+type Payment struct {
+	ID            uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	TransactionID uuid.UUID `gorm:"type:uuid;not null"`
+	Amount        int64     `gorm:"not null"`
+	Status        string    `gorm:"default:'PENDING'"` // PENDING, FINISHED, FAILED, EXPIRED
+	ExternalID    string
+	PaymentURL    string
+	ExpiresAt     time.Time
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 type Transaction struct {
-	ID          uuid.UUID `gorm:"type:uuid;primaryKey"`
-	UserID      uuid.UUID `gorm:"type:uuid;index;not null"`
-	Amount      int64     `gorm:"not null"`
-	Type        string    `gorm:"type:varchar(20);not null"` // DEPOSIT, WITHDRAWAL, PURCHASE
-	Status      string    `gorm:"type:varchar(20);default:'PENDING'"` // PENDING, COMPLETED, FAILED, EXPIRED
-	ReferenceID string    `gorm:"type:varchar(100)"`          // External Payment ID (e.g. Xendit Invoice ID)
-	PaymentURL  string    `gorm:"type:text"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
-	DeletedAt   gorm.DeletedAt `gorm:"index"`
+	ID        uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	UserID    uuid.UUID `gorm:"type:uuid;not null"`
+	Amount    int64     `gorm:"not null"`
+	Type      string    `gorm:"not null"` // DEPOSIT, ADOPT, CARE
+	Payment   Payment   `gorm:"foreignKey:TransactionID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }

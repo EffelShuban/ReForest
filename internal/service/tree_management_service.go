@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"reforest/internal/models"
 	"reforest/internal/repository"
 	"reforest/pkg/pb"
@@ -113,6 +114,25 @@ func (s *treeManagementService) AdoptTree(ctx context.Context, req *pb.AdoptTree
 	plotID, err := primitive.ObjectIDFromHex(req.PlotId)
 	if err != nil {
 		return nil, models.ErrInvalidInput
+	}
+
+	species, err := s.repo.GetSpecies(ctx, speciesID)
+	if err != nil {
+		return nil, err
+	}
+
+	plot, err := s.repo.GetPlot(ctx, plotID)
+	if err != nil {
+		return nil, err
+	}
+
+	if plot.AvailableSpaceM2 < species.SpaceRequiredM2 {
+		return nil, fmt.Errorf("insufficient space in plot: available %.2f, required %.2f", plot.AvailableSpaceM2, species.SpaceRequiredM2)
+	}
+
+	plot.AvailableSpaceM2 -= species.SpaceRequiredM2
+	if _, err := s.repo.UpdatePlot(ctx, plot); err != nil {
+		return nil, fmt.Errorf("failed to update plot space: %w", err)
 	}
 
 	tree := &models.Tree{

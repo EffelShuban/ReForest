@@ -5,15 +5,14 @@ package finance;
 option go_package = "reforest/pkg/pb";
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
 
 service FinanceService {
   rpc CreateTransaction(TransactionRequest) returns (Transaction);
-  rpc TopUpWallet(TopUpRequest) returns (PaymentUrlResponse);
+  rpc TopUpWallet(TopUpRequest) returns (Transaction);
   rpc HandleWalletWebhook(WebhookRequest) returns (google.protobuf.Empty);
   rpc GetBalance(google.protobuf.Empty) returns (BalanceResponse);
   rpc GetTransactionHistory(google.protobuf.Empty) returns (TransactionList);
-  
-  // Scheduled Jobs
   rpc CheckPaymentExpiry(google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
@@ -31,14 +30,17 @@ message TransactionRequest {
 
 message TopUpRequest {
   int64 amount = 1;
+  int32 duration_seconds = 2;
 }
 
 message Transaction {
   string id = 1;
   string user_id = 2;
   int64 amount = 3;
-  TransactionType type = 4;
+  string type = 4;
   string status = 5;
+  string payment_url = 6;
+  google.protobuf.Timestamp expires_at = 7;
 }
 
 message TransactionList { repeated Transaction transactions = 1; }
@@ -49,5 +51,5 @@ message BalanceResponse { double balance = 1; }
 
 message WebhookRequest {
   string event = 1;
-  bytes data = 2; // Generic payload from Xendit
+  bytes data = 2;
 }
