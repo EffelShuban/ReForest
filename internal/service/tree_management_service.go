@@ -2,13 +2,13 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"reforest/internal/models"
 	"reforest/internal/repository"
 	"reforest/pkg/pb"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type TreeManagementService interface {
@@ -37,11 +37,12 @@ type TreeManagementService interface {
 }
 
 type treeManagementService struct {
-	repo repository.TreeManagementRepository
+	repo          repository.TreeManagementRepository
+	financeClient pb.FinanceServiceClient
 }
 
-func NewTreeManagementService(repo repository.TreeManagementRepository) TreeManagementService {
-	return &treeManagementService{repo: repo}
+func NewTreeManagementService(repo repository.TreeManagementRepository, financeClient pb.FinanceServiceClient) TreeManagementService {
+	return &treeManagementService{repo: repo, financeClient: financeClient}
 }
 
 func (s *treeManagementService) CreateSpecies(ctx context.Context, req *pb.Species) (*models.Species, error) {
@@ -116,31 +117,12 @@ func (s *treeManagementService) AdoptTree(ctx context.Context, req *pb.AdoptTree
 		return nil, models.ErrInvalidInput
 	}
 
-	species, err := s.repo.GetSpecies(ctx, speciesID)
-	if err != nil {
-		return nil, err
-	}
-
-	plot, err := s.repo.GetPlot(ctx, plotID)
-	if err != nil {
-		return nil, err
-	}
-
-	if plot.AvailableSpaceM2 < species.SpaceRequiredM2 {
-		return nil, fmt.Errorf("insufficient space in plot: available %.2f, required %.2f", plot.AvailableSpaceM2, species.SpaceRequiredM2)
-	}
-
-	plot.AvailableSpaceM2 -= species.SpaceRequiredM2
-	if _, err := s.repo.UpdatePlot(ctx, plot); err != nil {
-		return nil, fmt.Errorf("failed to update plot space: %w", err)
-	}
-
 	tree := &models.Tree{
 		SponsorID:           sponsorID,
 		SpeciesID:           speciesID,
 		PlotID:              plotID,
 		CustomName:          req.CustomName,
-		InitialHeightMeters: 0,
+		CurrentHeightMeters: 0,
 		TotalFundedLifetime: 0,
 		LastCareDate:        time.Now(),
 		AdoptedAt:           time.Now(),
@@ -149,11 +131,54 @@ func (s *treeManagementService) AdoptTree(ctx context.Context, req *pb.AdoptTree
 }
 
 func (s *treeManagementService) GetTree(ctx context.Context, id primitive.ObjectID) (*models.Tree, error) {
-	return s.repo.GetTree(ctx, id)
+	tree, err := s.repo.GetTree(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Populate CurrentHeightMeters from Logs
+	logs, err := s.repo.GetLogsByTreeID(ctx, tree.ID)
+	if err == nil && len(logs) > 0 {
+		var maxHeight float64
+		for _, log := range logs {
+			if log.CurrentHeightMeters > maxHeight {
+				maxHeight = log.CurrentHeightMeters
+			}
+		}
+		tree.CurrentHeightMeters = maxHeight
+	}
+
+	txList, err := s.financeClient.GetTransactionHistory(ctx, &emptypb.Empty{})
+	if err == nil && txList != nil {
+		var totalFunded int32
+		for _, tx := range txList.Transactions {
+			totalFunded += int32(tx.Amount)
+		}
+		tree.TotalFundedLifetime = totalFunded
+	}
+
+	return tree, nil
 }
 
 func (s *treeManagementService) ListTrees(ctx context.Context) ([]*models.Tree, error) {
-	return s.repo.ListTrees(ctx)
+	trees, err := s.repo.ListTrees(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Populate computed fields for each tree
+	// Note: In production, this N+1 query pattern should be optimized with batch fetching
+	for _, tree := range trees {
+		// Re-use GetTree logic or simplified version
+		logs, _ := s.repo.GetLogsByTreeID(ctx, tree.ID)
+		for _, log := range logs {
+			if log.CurrentHeightMeters > tree.CurrentHeightMeters {
+				tree.CurrentHeightMeters = log.CurrentHeightMeters
+			}
+		}
+		// Skipping transaction fetch per tree for list to avoid excessive overhead
+	}
+	return trees, nil
 }
 
 func (s *treeManagementService) UpdateTree(ctx context.Context, id primitive.ObjectID, req *pb.Tree) (*models.Tree, error) {
@@ -172,8 +197,8 @@ func (s *treeManagementService) UpdateTree(ctx context.Context, id primitive.Obj
 		SpeciesID:           speciesID,
 		PlotID:              plotID,
 		CustomName:          req.CustomName,
-		InitialHeightMeters: float64(req.InitialHeightMeters),
-		TotalFundedLifetime: req.TotalFundedLifetime,
+		CurrentHeightMeters: float64(req.CurrentHeightMeters), // Mapped from proto
+		TotalFundedLifetime: req.TotalFundedLifetime,          // Mapped from proto
 		LastCareDate:        req.LastCareDate.AsTime(),
 		AdoptedAt:           req.AdoptedAt.AsTime(),
 	}

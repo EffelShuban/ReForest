@@ -26,10 +26,10 @@ type Tree struct {
 	SpeciesID           primitive.ObjectID `bson:"species_id"`
 	PlotID              primitive.ObjectID `bson:"plot_id"`
 	CustomName          string             `bson:"custom_name"`
-	InitialHeightMeters float64            `bson:"initial_height_meters"`
-	TotalFundedLifetime int32              `bson:"total_funded_lifetime"`
-	LastCareDate        time.Time          `bson:"last_care_date"`
-	AdoptedAt           time.Time          `bson:"adopted_at"`
+	CurrentHeightMeters float64
+	TotalFundedLifetime int32
+	LastCareDate        time.Time
+	AdoptedAt          time.Time          `bson:"adopted_at"`
 }
 
 type LogEntry struct {

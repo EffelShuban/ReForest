@@ -52,7 +52,7 @@ func mapTreeToProto(t *models.Tree) *pb.Tree {
 		SpeciesId:           t.SpeciesID.Hex(),
 		PlotId:              t.PlotID.Hex(),
 		CustomName:          t.CustomName,
-		InitialHeightMeters: float32(t.InitialHeightMeters),
+		CurrentHeightMeters: float32(t.CurrentHeightMeters),
 		TotalFundedLifetime: t.TotalFundedLifetime,
 		LastCareDate:        timestamppb.New(t.LastCareDate),
 		AdoptedAt:           timestamppb.New(t.AdoptedAt),

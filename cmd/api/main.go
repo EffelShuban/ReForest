@@ -306,7 +306,6 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "received"})
 	})
 
-	// Scheduled Job Route (Triggered by Cron or manually)
 	r.POST("/jobs/payment-expiry-check", func(c *gin.Context) {
 		_, err := financeClient.CheckPaymentExpiry(c.Request.Context(), &emptypb.Empty{})
 		if err != nil {
