@@ -70,11 +70,12 @@ func (s *financeService) CreateTransaction(ctx context.Context, req *pb.Transact
 		return nil, err
 	}
 
-	if req.Type == pb.TransactionType_DEPOSIT {
+	switch req.Type {
+	case pb.TransactionType_DEPOSIT:
 		if err := s.repo.UpdateWalletBalance(ctx, userID, req.Amount); err != nil {
 			return nil, fmt.Errorf("failed to update wallet balance for deposit: %w", err)
 		}
-	} else if req.Type == pb.TransactionType_WITHDRAWAL || req.Type == pb.TransactionType_PURCHASE {
+	case pb.TransactionType_ADOPT, pb.TransactionType_CARE:
 		if err := s.repo.UpdateWalletBalance(ctx, userID, -req.Amount); err != nil {
 			return nil, fmt.Errorf("failed to update wallet balance for withdrawal/purchase: %w", err)
 		}
