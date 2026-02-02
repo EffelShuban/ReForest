@@ -26,22 +26,22 @@ const (
 type TransactionType int32
 
 const (
-	TransactionType_DEPOSIT    TransactionType = 0
-	TransactionType_WITHDRAWAL TransactionType = 1
-	TransactionType_PURCHASE   TransactionType = 2
+	TransactionType_DEPOSIT TransactionType = 0
+	TransactionType_ADOPT   TransactionType = 1
+	TransactionType_CARE    TransactionType = 2
 )
 
 // Enum value maps for TransactionType.
 var (
 	TransactionType_name = map[int32]string{
 		0: "DEPOSIT",
-		1: "WITHDRAWAL",
-		2: "PURCHASE",
+		1: "ADOPT",
+		2: "CARE",
 	}
 	TransactionType_value = map[string]int32{
-		"DEPOSIT":    0,
-		"WITHDRAWAL": 1,
-		"PURCHASE":   2,
+		"DEPOSIT": 0,
+		"ADOPT":   1,
+		"CARE":    2,
 	}
 )
 
@@ -490,12 +490,11 @@ const file_proto_finance_service_proto_rawDesc = "" +
 	"\abalance\x18\x01 \x01(\x01R\abalance\":\n" +
 	"\x0eWebhookRequest\x12\x14\n" +
 	"\x05event\x18\x01 \x01(\tR\x05event\x12\x12\n" +
-	"\x04data\x18\x02 \x01(\fR\x04data*<\n" +
+	"\x04data\x18\x02 \x01(\fR\x04data*3\n" +
 	"\x0fTransactionType\x12\v\n" +
-	"\aDEPOSIT\x10\x00\x12\x0e\n" +
-	"\n" +
-	"WITHDRAWAL\x10\x01\x12\f\n" +
-	"\bPURCHASE\x10\x022\xad\x03\n" +
+	"\aDEPOSIT\x10\x00\x12\t\n" +
+	"\x05ADOPT\x10\x01\x12\b\n" +
+	"\x04CARE\x10\x022\xad\x03\n" +
 	"\x0eFinanceService\x12F\n" +
 	"\x11CreateTransaction\x12\x1b.finance.TransactionRequest\x1a\x14.finance.Transaction\x12:\n" +
 	"\vTopUpWallet\x12\x15.finance.TopUpRequest\x1a\x14.finance.Transaction\x12F\n" +

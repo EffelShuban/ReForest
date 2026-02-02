@@ -18,8 +18,8 @@ service FinanceService {
 
 enum TransactionType {
   DEPOSIT = 0;
-  WITHDRAWAL = 1;
-  PURCHASE = 2;
+  ADOPT = 1;
+  CARE = 2;
 }
 
 message TransactionRequest {
