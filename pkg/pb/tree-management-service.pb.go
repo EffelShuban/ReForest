@@ -298,7 +298,7 @@ type Tree struct {
 	SpeciesId           string                 `protobuf:"bytes,3,opt,name=species_id,json=speciesId,proto3" json:"species_id,omitempty"`
 	PlotId              string                 `protobuf:"bytes,4,opt,name=plot_id,json=plotId,proto3" json:"plot_id,omitempty"`
 	CustomName          string                 `protobuf:"bytes,5,opt,name=custom_name,json=customName,proto3" json:"custom_name,omitempty"`
-	InitialHeightMeters float32                `protobuf:"fixed32,6,opt,name=initial_height_meters,json=initialHeightMeters,proto3" json:"initial_height_meters,omitempty"`
+	CurrentHeightMeters float32                `protobuf:"fixed32,6,opt,name=current_height_meters,json=currentHeightMeters,proto3" json:"current_height_meters,omitempty"`
 	TotalFundedLifetime int32                  `protobuf:"varint,7,opt,name=total_funded_lifetime,json=totalFundedLifetime,proto3" json:"total_funded_lifetime,omitempty"`
 	LastCareDate        *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=last_care_date,json=lastCareDate,proto3" json:"last_care_date,omitempty"`
 	AdoptedAt           *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=adopted_at,json=adoptedAt,proto3" json:"adopted_at,omitempty"`
@@ -371,9 +371,9 @@ func (x *Tree) GetCustomName() string {
 	return ""
 }
 
-func (x *Tree) GetInitialHeightMeters() float32 {
+func (x *Tree) GetCurrentHeightMeters() float32 {
 	if x != nil {
-		return x.InitialHeightMeters
+		return x.CurrentHeightMeters
 	}
 	return 0
 }
@@ -506,7 +506,7 @@ func (x *AdoptTreeRequest) GetCustomName() string {
 type AdoptTreeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TreeId        string                 `protobuf:"bytes,1,opt,name=tree_id,json=treeId,proto3" json:"tree_id,omitempty"`
-	PaymentUrl    string                 `protobuf:"bytes,2,opt,name=payment_url,json=paymentUrl,proto3" json:"payment_url,omitempty"` // Provided if balance is low (402 logic)
+	PaymentUrl    string                 `protobuf:"bytes,2,opt,name=payment_url,json=paymentUrl,proto3" json:"payment_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -791,7 +791,7 @@ const file_proto_tree_management_service_proto_rawDesc = "" +
 	"\aplot_id\x18\x04 \x01(\tR\x06plotId\x12\x1f\n" +
 	"\vcustom_name\x18\x05 \x01(\tR\n" +
 	"customName\x122\n" +
-	"\x15initial_height_meters\x18\x06 \x01(\x02R\x13initialHeightMeters\x122\n" +
+	"\x15current_height_meters\x18\x06 \x01(\x02R\x13currentHeightMeters\x122\n" +
 	"\x15total_funded_lifetime\x18\a \x01(\x05R\x13totalFundedLifetime\x12@\n" +
 	"\x0elast_care_date\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\flastCareDate\x129\n" +
 	"\n" +

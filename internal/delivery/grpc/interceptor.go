@@ -19,7 +19,7 @@ const (
 	userRoleKey contextKey = "userRole"
 )
 
-func AuthInterceptor(jwtProvider *utils.JWTProvider, publicMethods map[string]bool, adminMethods map[string]bool) googleGrpc.UnaryServerInterceptor {
+func AuthInterceptor(jwtProvider *utils.JWTProvider, publicMethods map[string]bool, adminMethods map[string]bool, sponsorMethods map[string]bool) googleGrpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *googleGrpc.UnaryServerInfo, handler googleGrpc.UnaryHandler) (interface{}, error) {
 		if publicMethods[info.FullMethod] {
 			return handler(ctx, req)
@@ -50,6 +50,12 @@ func AuthInterceptor(jwtProvider *utils.JWTProvider, publicMethods map[string]bo
 		if adminMethods[info.FullMethod] {
 			if claims.Role != "ADMIN" {
 				return nil, status.Error(codes.PermissionDenied, "this action requires admin privileges")
+			}
+		}
+
+		if sponsorMethods[info.FullMethod] {
+			if claims.Role != "SPONSOR" {
+				return nil, status.Error(codes.PermissionDenied, "this action requires sponsor privileges")
 			}
 		}
 

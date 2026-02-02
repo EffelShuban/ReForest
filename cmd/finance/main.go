@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net"
+	"time"
 
 	"reforest/config"
 	"reforest/internal/delivery/grpc"
@@ -19,13 +21,10 @@ import (
 func main() {
 	cfg := config.Load()
 
-	// Using the same Postgres DB as Auth service for simplicity in this context,
-	// or it could be a separate DB in a real microservices setup.
 	db := database.NewConnection(cfg.DBDSN)
 
-	// Auto-migrate finance models
 	log.Println("Running finance migrations...")
-	if err := db.AutoMigrate(&models.Wallet{}, &models.Transaction{}); err != nil {
+	if err := db.AutoMigrate(&models.Transaction{}, &models.Payment{}); err != nil {
 		log.Fatalf("failed to migrate finance database: %v", err)
 	}
 
@@ -35,6 +34,17 @@ func main() {
 	financeSvc := service.NewFinanceService(financeRepo, cfg.XenditAPIKey)
 	financeHandler := grpc.NewFinanceHandler(financeSvc)
 
+	go func() {
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			log.Println("Running scheduled payment expiry check...")
+			if err := financeSvc.CheckPaymentExpiry(context.Background()); err != nil {
+				log.Printf("Error running payment expiry check: %v", err)
+			}
+		}
+	}()
+
 	lis, err := net.Listen("tcp", cfg.FinanceGRPCPort)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -42,7 +52,6 @@ func main() {
 
 	publicMethods := map[string]bool{
 		"/finance.FinanceService/HandleWalletWebhook": true,
-		"/finance.FinanceService/GetTransactionHistory": true,
 		"/finance.FinanceService/CheckPaymentExpiry":    true,
 	}
 
@@ -51,7 +60,7 @@ func main() {
 	}
 
 	s := googleGrpc.NewServer(
-		googleGrpc.UnaryInterceptor(grpc.AuthInterceptor(jwtProvider, publicMethods, adminMethods)),
+		googleGrpc.UnaryInterceptor(grpc.AuthInterceptor(jwtProvider, publicMethods, adminMethods, nil)),
 	)
 	pb.RegisterFinanceServiceServer(s, financeHandler)
 

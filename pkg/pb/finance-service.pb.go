@@ -10,6 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -132,10 +133,11 @@ func (x *TransactionRequest) GetType() TransactionType {
 }
 
 type TopUpRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Amount        int64                  `protobuf:"varint,1,opt,name=amount,proto3" json:"amount,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Amount          int64                  `protobuf:"varint,1,opt,name=amount,proto3" json:"amount,omitempty"`
+	DurationSeconds int32                  `protobuf:"varint,2,opt,name=duration_seconds,json=durationSeconds,proto3" json:"duration_seconds,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *TopUpRequest) Reset() {
@@ -175,13 +177,22 @@ func (x *TopUpRequest) GetAmount() int64 {
 	return 0
 }
 
+func (x *TopUpRequest) GetDurationSeconds() int32 {
+	if x != nil {
+		return x.DurationSeconds
+	}
+	return 0
+}
+
 type Transaction struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	UserId        string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
 	Amount        int64                  `protobuf:"varint,3,opt,name=amount,proto3" json:"amount,omitempty"`
-	Type          TransactionType        `protobuf:"varint,4,opt,name=type,proto3,enum=finance.TransactionType" json:"type,omitempty"`
+	Type          string                 `protobuf:"bytes,4,opt,name=type,proto3" json:"type,omitempty"`
 	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
+	PaymentUrl    string                 `protobuf:"bytes,6,opt,name=payment_url,json=paymentUrl,proto3" json:"payment_url,omitempty"`
+	ExpiresAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -237,11 +248,11 @@ func (x *Transaction) GetAmount() int64 {
 	return 0
 }
 
-func (x *Transaction) GetType() TransactionType {
+func (x *Transaction) GetType() string {
 	if x != nil {
 		return x.Type
 	}
-	return TransactionType_DEPOSIT
+	return ""
 }
 
 func (x *Transaction) GetStatus() string {
@@ -249,6 +260,20 @@ func (x *Transaction) GetStatus() string {
 		return x.Status
 	}
 	return ""
+}
+
+func (x *Transaction) GetPaymentUrl() string {
+	if x != nil {
+		return x.PaymentUrl
+	}
+	return ""
+}
+
+func (x *Transaction) GetExpiresAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return nil
 }
 
 type TransactionList struct {
@@ -386,7 +411,7 @@ func (x *BalanceResponse) GetBalance() float64 {
 type WebhookRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Event         string                 `protobuf:"bytes,1,opt,name=event,proto3" json:"event,omitempty"`
-	Data          []byte                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"` // Generic payload from Xendit
+	Data          []byte                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -439,19 +464,24 @@ var File_proto_finance_service_proto protoreflect.FileDescriptor
 
 const file_proto_finance_service_proto_rawDesc = "" +
 	"\n" +
-	"\x1bproto/finance-service.proto\x12\afinance\x1a\x1bgoogle/protobuf/empty.proto\"s\n" +
+	"\x1bproto/finance-service.proto\x12\afinance\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"s\n" +
 	"\x12TransactionRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x16\n" +
 	"\x06amount\x18\x02 \x01(\x03R\x06amount\x12,\n" +
-	"\x04type\x18\x03 \x01(\x0e2\x18.finance.TransactionTypeR\x04type\"&\n" +
+	"\x04type\x18\x03 \x01(\x0e2\x18.finance.TransactionTypeR\x04type\"Q\n" +
 	"\fTopUpRequest\x12\x16\n" +
-	"\x06amount\x18\x01 \x01(\x03R\x06amount\"\x94\x01\n" +
+	"\x06amount\x18\x01 \x01(\x03R\x06amount\x12)\n" +
+	"\x10duration_seconds\x18\x02 \x01(\x05R\x0fdurationSeconds\"\xd6\x01\n" +
 	"\vTransaction\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x16\n" +
-	"\x06amount\x18\x03 \x01(\x03R\x06amount\x12,\n" +
-	"\x04type\x18\x04 \x01(\x0e2\x18.finance.TransactionTypeR\x04type\x12\x16\n" +
-	"\x06status\x18\x05 \x01(\tR\x06status\"K\n" +
+	"\x06amount\x18\x03 \x01(\x03R\x06amount\x12\x12\n" +
+	"\x04type\x18\x04 \x01(\tR\x04type\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\x12\x1f\n" +
+	"\vpayment_url\x18\x06 \x01(\tR\n" +
+	"paymentUrl\x129\n" +
+	"\n" +
+	"expires_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\texpiresAt\"K\n" +
 	"\x0fTransactionList\x128\n" +
 	"\ftransactions\x18\x01 \x03(\v2\x14.finance.TransactionR\ftransactions\"&\n" +
 	"\x12PaymentUrlResponse\x12\x10\n" +
@@ -465,10 +495,10 @@ const file_proto_finance_service_proto_rawDesc = "" +
 	"\aDEPOSIT\x10\x00\x12\x0e\n" +
 	"\n" +
 	"WITHDRAWAL\x10\x01\x12\f\n" +
-	"\bPURCHASE\x10\x022\xb4\x03\n" +
+	"\bPURCHASE\x10\x022\xad\x03\n" +
 	"\x0eFinanceService\x12F\n" +
-	"\x11CreateTransaction\x12\x1b.finance.TransactionRequest\x1a\x14.finance.Transaction\x12A\n" +
-	"\vTopUpWallet\x12\x15.finance.TopUpRequest\x1a\x1b.finance.PaymentUrlResponse\x12F\n" +
+	"\x11CreateTransaction\x12\x1b.finance.TransactionRequest\x1a\x14.finance.Transaction\x12:\n" +
+	"\vTopUpWallet\x12\x15.finance.TopUpRequest\x1a\x14.finance.Transaction\x12F\n" +
 	"\x13HandleWalletWebhook\x12\x17.finance.WebhookRequest\x1a\x16.google.protobuf.Empty\x12>\n" +
 	"\n" +
 	"GetBalance\x12\x16.google.protobuf.Empty\x1a\x18.finance.BalanceResponse\x12I\n" +
@@ -490,32 +520,33 @@ func file_proto_finance_service_proto_rawDescGZIP() []byte {
 var file_proto_finance_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_proto_finance_service_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_proto_finance_service_proto_goTypes = []any{
-	(TransactionType)(0),       // 0: finance.TransactionType
-	(*TransactionRequest)(nil), // 1: finance.TransactionRequest
-	(*TopUpRequest)(nil),       // 2: finance.TopUpRequest
-	(*Transaction)(nil),        // 3: finance.Transaction
-	(*TransactionList)(nil),    // 4: finance.TransactionList
-	(*PaymentUrlResponse)(nil), // 5: finance.PaymentUrlResponse
-	(*BalanceResponse)(nil),    // 6: finance.BalanceResponse
-	(*WebhookRequest)(nil),     // 7: finance.WebhookRequest
-	(*emptypb.Empty)(nil),      // 8: google.protobuf.Empty
+	(TransactionType)(0),          // 0: finance.TransactionType
+	(*TransactionRequest)(nil),    // 1: finance.TransactionRequest
+	(*TopUpRequest)(nil),          // 2: finance.TopUpRequest
+	(*Transaction)(nil),           // 3: finance.Transaction
+	(*TransactionList)(nil),       // 4: finance.TransactionList
+	(*PaymentUrlResponse)(nil),    // 5: finance.PaymentUrlResponse
+	(*BalanceResponse)(nil),       // 6: finance.BalanceResponse
+	(*WebhookRequest)(nil),        // 7: finance.WebhookRequest
+	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 9: google.protobuf.Empty
 }
 var file_proto_finance_service_proto_depIdxs = []int32{
 	0, // 0: finance.TransactionRequest.type:type_name -> finance.TransactionType
-	0, // 1: finance.Transaction.type:type_name -> finance.TransactionType
+	8, // 1: finance.Transaction.expires_at:type_name -> google.protobuf.Timestamp
 	3, // 2: finance.TransactionList.transactions:type_name -> finance.Transaction
 	1, // 3: finance.FinanceService.CreateTransaction:input_type -> finance.TransactionRequest
 	2, // 4: finance.FinanceService.TopUpWallet:input_type -> finance.TopUpRequest
 	7, // 5: finance.FinanceService.HandleWalletWebhook:input_type -> finance.WebhookRequest
-	8, // 6: finance.FinanceService.GetBalance:input_type -> google.protobuf.Empty
-	8, // 7: finance.FinanceService.GetTransactionHistory:input_type -> google.protobuf.Empty
-	8, // 8: finance.FinanceService.CheckPaymentExpiry:input_type -> google.protobuf.Empty
+	9, // 6: finance.FinanceService.GetBalance:input_type -> google.protobuf.Empty
+	9, // 7: finance.FinanceService.GetTransactionHistory:input_type -> google.protobuf.Empty
+	9, // 8: finance.FinanceService.CheckPaymentExpiry:input_type -> google.protobuf.Empty
 	3, // 9: finance.FinanceService.CreateTransaction:output_type -> finance.Transaction
-	5, // 10: finance.FinanceService.TopUpWallet:output_type -> finance.PaymentUrlResponse
-	8, // 11: finance.FinanceService.HandleWalletWebhook:output_type -> google.protobuf.Empty
+	3, // 10: finance.FinanceService.TopUpWallet:output_type -> finance.Transaction
+	9, // 11: finance.FinanceService.HandleWalletWebhook:output_type -> google.protobuf.Empty
 	6, // 12: finance.FinanceService.GetBalance:output_type -> finance.BalanceResponse
 	4, // 13: finance.FinanceService.GetTransactionHistory:output_type -> finance.TransactionList
-	8, // 14: finance.FinanceService.CheckPaymentExpiry:output_type -> google.protobuf.Empty
+	9, // 14: finance.FinanceService.CheckPaymentExpiry:output_type -> google.protobuf.Empty
 	9, // [9:15] is the sub-list for method output_type
 	3, // [3:9] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
