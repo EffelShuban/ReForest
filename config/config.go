@@ -1,6 +1,11 @@
 package config
 
-import "os"
+import (
+	"log"
+	"os"
+
+	"github.com/joho/godotenv"
+)
 
 type Config struct {
 	DBDSN           string
@@ -83,25 +88,19 @@ func Load() *Config {
 		rabbitMQURL = "amqp://guest:guest@rabbitmq:5672/"
 	}
 
-	rabbitMQURL := os.Getenv("RABBITMQ_URL")
-	if rabbitMQURL == "" {
-		rabbitMQURL = "amqp://guest:guest@rabbitmq:5672/"
-	}
-
 	return &Config{
-		DBDSN:           dsn,
-		MongoDSN:        mongoDSN,
-		JWTSecret:       jwtSecret,
-		AuthGRPCPort:    authGrpcPort,
-		TreeGRPCPort:    treeGrpcPort,
-		FinanceGRPCPort: financeGrpcPort,
-		XenditAPIKey:    xenditAPIKey,
-		RabbitMQURL:     rabbitMQURL,
+		DBDSN:              os.Getenv("DB_DSN"),
+		MongoDSN:           os.Getenv("MONGO_DSN"),
+		JWTSecret:          os.Getenv("JWT_SECRET"),
+		AuthGRPCPort:       os.Getenv("AUTH_GRPC_PORT"),
+		TreeGRPCPort:       os.Getenv("TREE_GRPC_PORT"),
+		FinanceGRPCPort: os.Getenv("FINANCE_GRPC_PORT"),
+		XenditAPIKey:    os.Getenv("XENDIT_API_KEY"),
 		MailtrapHost:    mailtrapHost,
 		MailtrapPort:    mailtrapPort,
 		MailtrapUser:    mailtrapUser,
 		MailtrapPass:    mailtrapPass,
 		MailtrapFrom:    mailtrapFrom,
-		RabbitMQURL:     rabbitMQURL,
+		RabbitMQURL:     os.Getenv("RABBITMQ_URL"),
 	}
 }

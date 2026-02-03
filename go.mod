@@ -52,6 +52,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/joho/godotenv v1.5.1
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/xendit/xendit-go/v6 v6.4.0
 	go.mongodb.org/mongo-driver v1.17.7

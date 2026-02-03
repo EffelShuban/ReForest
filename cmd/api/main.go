@@ -15,6 +15,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -57,40 +58,32 @@ func respondProto(c *gin.Context, code int, msg proto.Message) {
 }
 
 func main() {
-	authServiceUrl := os.Getenv("AUTH_SERVICE_URL")
-	if authServiceUrl == "" {
-		authServiceUrl = "localhost:50051"
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, reading from environment variables")
 	}
+
+	authServiceUrl := os.Getenv("AUTH_SERVICE_URL")
 	conn, err := grpc.NewClient(authServiceUrl, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect to auth service: %v", err)
 	}
 	defer conn.Close()
-
 	authClient := pb.NewAuthServiceClient(conn)
 
 	treeMgmtServiceURL := os.Getenv("TREE_MANAGEMENT_SERVICE_URL")
-	if treeMgmtServiceURL == "" {
-		treeMgmtServiceURL = "localhost:50052"
-	}
 	treeConn, err := grpc.NewClient(treeMgmtServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect to tree management service: %v", err)
 	}
 	defer treeConn.Close()
-
 	treeClient := pb.NewTreeServiceClient(treeConn)
 
 	financeServiceURL := os.Getenv("FINANCE_SERVICE_URL")
-	if financeServiceURL == "" {
-		financeServiceURL = "localhost:50053"
-	}
 	financeConn, err := grpc.NewClient(financeServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("did not connect to finance service: %v", err)
 	}
 	defer financeConn.Close()
-
 	financeClient := pb.NewFinanceServiceClient(financeConn)
 
 	r := gin.Default()
