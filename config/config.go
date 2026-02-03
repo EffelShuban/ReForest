@@ -3,13 +3,18 @@ package config
 import "os"
 
 type Config struct {
-	DBDSN        string
-	MongoDSN     string
-	JWTSecret    string
-	AuthGRPCPort string
-	TreeGRPCPort string
+	DBDSN           string
+	MongoDSN        string
+	JWTSecret       string
+	AuthGRPCPort    string
+	TreeGRPCPort    string
 	FinanceGRPCPort string
 	XenditAPIKey    string
+	MailtrapHost    string
+	MailtrapPort    string
+	MailtrapUser    string
+	MailtrapPass    string
+	MailtrapFrom    string
 }
 
 func Load() *Config {
@@ -48,13 +53,43 @@ func Load() *Config {
 		xenditAPIKey = "xnd_public_development_G3NFqweuzg_Ke9pjaBtZBSIExYCVP0yQA77ZeETSbcI_4yMx5MFc60MROYi0Je"
 	}
 
+	mailtrapHost := os.Getenv("MAILTRAP_HOST")
+	if mailtrapHost == "" {
+		mailtrapHost = "sandbox.smtp.mailtrap.io"
+	}
+
+	mailtrapPort := os.Getenv("MAILTRAP_PORT")
+	if mailtrapPort == "" {
+		mailtrapPort = "2525"
+	}
+
+	mailtrapUser := os.Getenv("MAILTRAP_USER")
+	if mailtrapUser == "" {
+		mailtrapUser = "username"
+	}
+
+	mailtrapPass := os.Getenv("MAILTRAP_PASS")
+	if mailtrapPass == "" {
+		mailtrapPass = "password"
+	}
+
+	mailtrapFrom := os.Getenv("MAILTRAP_FROM")
+	if mailtrapFrom == "" {
+		mailtrapFrom = "no-reply@example.com"
+	}
+
 	return &Config{
-		DBDSN:        dsn,
-		MongoDSN:     mongoDSN,
-		JWTSecret:    jwtSecret,
-		AuthGRPCPort: authGrpcPort,
-		TreeGRPCPort: treeGrpcPort,
+		DBDSN:           dsn,
+		MongoDSN:        mongoDSN,
+		JWTSecret:       jwtSecret,
+		AuthGRPCPort:    authGrpcPort,
+		TreeGRPCPort:    treeGrpcPort,
 		FinanceGRPCPort: financeGrpcPort,
 		XenditAPIKey:    xenditAPIKey,
+		MailtrapHost:    mailtrapHost,
+		MailtrapPort:    mailtrapPort,
+		MailtrapUser:    mailtrapUser,
+		MailtrapPass:    mailtrapPass,
+		MailtrapFrom:    mailtrapFrom,
 	}
 }
