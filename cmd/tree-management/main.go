@@ -16,6 +16,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	googleGrpc "google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -29,9 +30,16 @@ func main() {
 	}
 	db := mongoClient.Database("reforest_db")
 
+	financeConn, err := googleGrpc.NewClient("finance-service:50053", googleGrpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("failed to connect to finance service: %v", err)
+	}
+	defer financeConn.Close()
+	financeClient := pb.NewFinanceServiceClient(financeConn)
+
 	jwtProvider := utils.NewJWTProvider(cfg.JWTSecret)
 	treeRepo := repository.NewTreeManagementRepository(db)
-	treeSvc := service.NewTreeManagementService(treeRepo)
+	treeSvc := service.NewTreeManagementService(treeRepo, financeClient)
 	treeHandler := grpc.NewTreeManagementHandler(treeSvc)
 
 	lis, err := net.Listen("tcp", cfg.TreeGRPCPort)
@@ -64,8 +72,12 @@ func main() {
 		"/tree.TreeService/TriggerBiweeklyMaintenance": true,
 	}
 
+	sponsorMethods := map[string]bool{
+		"/tree.TreeService/AdoptTree": true,
+	}
+
 	s := googleGrpc.NewServer(
-		googleGrpc.UnaryInterceptor(grpc.AuthInterceptor(jwtProvider, publicMethods, adminMethods)),
+		googleGrpc.UnaryInterceptor(grpc.AuthInterceptor(jwtProvider, publicMethods, adminMethods, sponsorMethods)),
 	)
 	pb.RegisterTreeServiceServer(s, treeHandler)
 

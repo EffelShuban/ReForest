@@ -60,6 +60,23 @@ services:
     depends_on:
       - mongo-db
 
+  finance-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: finance-service
+    restart: on-failure
+    ports:
+      - "50053:50053"
+    environment:
+      - DB_DSN=host=postgres-db user=user password=password dbname=reforest_db port=5432 sslmode=disable
+      - JWT_SECRET=your-super-secret-key
+      - FINANCE_GRPC_PORT=:50053
+      - XENDIT_API_KEY=xnd_development_H0I5cYjC4pQ3ALBT9ZRyGjm59tPq9W6xa35sE2t0Trs8eLA0wtni0hiA4XUgtRf
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+
   api-gateway:
     build:
       context: .
@@ -72,10 +89,12 @@ services:
     depends_on:
       - auth-service
       - tree-management-service
+      - finance-service
     # You will need to add environment variables for the API gateway to connect to the auth service
     environment:
       - AUTH_SERVICE_URL=auth-service:50051
       - TREE_MANAGEMENT_SERVICE_URL=tree-management-service:50052
+      - FINANCE_SERVICE_URL=finance-service:50053
 
 volumes:
   postgres_data:

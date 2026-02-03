@@ -33,6 +33,7 @@ erDiagram
         int amount
         string status "PENDING | FINISHED | FAILED | EXPIRED"
         string external_id
+        string payment_url
         timestamp created_at
     }
 
@@ -65,9 +66,6 @@ erDiagram
         uuid species_id FK
         uuid plot_id FK
         string custom_name
-        float initial_height_meters
-        timestamp last_care_date
-        timestamp adopted_at
     }
 
     TREE_LOG {

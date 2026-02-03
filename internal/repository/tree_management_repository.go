@@ -37,6 +37,7 @@ type TreeManagementRepository interface {
 	DeleteTree(ctx context.Context, id primitive.ObjectID) error
 
 	CreateLog(ctx context.Context, log *models.LogEntry) (*models.LogEntry, error)
+	GetLog(ctx context.Context, id primitive.ObjectID) (*models.LogEntry, error)
 	GetLogsByTreeID(ctx context.Context, treeID primitive.ObjectID) ([]*models.LogEntry, error)
 	UpdateLog(ctx context.Context, log *models.LogEntry) (*models.LogEntry, error)
 	DeleteLog(ctx context.Context, id primitive.ObjectID) error
@@ -233,8 +234,6 @@ func (r *treeManagementRepository) UpdateTree(ctx context.Context, tree *models.
 			"species_id":            tree.SpeciesID,
 			"plot_id":               tree.PlotID,
 			"custom_name":           tree.CustomName,
-			"initial_height_meters": tree.InitialHeightMeters,
-			"total_funded_lifetime": tree.TotalFundedLifetime,
 			"last_care_date":        tree.LastCareDate,
 			"adopted_at":            tree.AdoptedAt,
 		},
@@ -273,6 +272,18 @@ func (r *treeManagementRepository) CreateLog(ctx context.Context, log *models.Lo
 	}
 	log.ID = res.InsertedID.(primitive.ObjectID)
 	return log, nil
+}
+
+func (r *treeManagementRepository) GetLog(ctx context.Context, id primitive.ObjectID) (*models.LogEntry, error) {
+	var log models.LogEntry
+	err := r.db.Collection(logCollection).FindOne(ctx, bson.M{"_id": id}).Decode(&log)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, models.ErrNotFound
+		}
+		return nil, err
+	}
+	return &log, nil
 }
 
 func (r *treeManagementRepository) GetLogsByTreeID(ctx context.Context, treeID primitive.ObjectID) ([]*models.LogEntry, error) {

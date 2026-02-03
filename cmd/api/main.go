@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -34,6 +36,8 @@ func handleGrpcError(c *gin.Context, err error) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": st.Message()})
 	case codes.PermissionDenied:
 		c.JSON(http.StatusForbidden, gin.H{"error": st.Message()})
+	case codes.Unauthenticated:
+		c.JSON(http.StatusUnauthorized, gin.H{"error": st.Message()})
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": st.Message()})
 	}
@@ -77,11 +81,40 @@ func main() {
 
 	treeClient := pb.NewTreeServiceClient(treeConn)
 
+	financeServiceURL := os.Getenv("FINANCE_SERVICE_URL")
+	if financeServiceURL == "" {
+		financeServiceURL = "localhost:50053"
+	}
+	financeConn, err := grpc.NewClient(financeServiceURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("did not connect to finance service: %v", err)
+	}
+	defer financeConn.Close()
+
+	financeClient := pb.NewFinanceServiceClient(financeConn)
+
 	r := gin.Default()
 
 	authForwarder := func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		ctx := metadata.NewOutgoingContext(c.Request.Context(), metadata.New(map[string]string{"authorization": authHeader}))
+		mdMap := map[string]string{"authorization": authHeader}
+
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			tokenParts := strings.Split(strings.TrimPrefix(authHeader, "Bearer "), ".")
+			if len(tokenParts) > 1 {
+				payload, err := base64.RawURLEncoding.DecodeString(tokenParts[1])
+				if err == nil {
+					var claims struct {
+						UserID string `json:"user_id"`
+					}
+					if err := json.Unmarshal(payload, &claims); err == nil && claims.UserID != "" {
+						mdMap["x-user-id"] = claims.UserID
+					}
+				}
+			}
+		}
+
+		ctx := metadata.NewOutgoingContext(c.Request.Context(), metadata.New(mdMap))
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
 	}
@@ -221,7 +254,66 @@ func main() {
 			}
 			respondProto(c, http.StatusCreated, res)
 		})
+
+		authRoutes.GET("/wallet/balance", func(c *gin.Context) {
+			res, err := financeClient.GetBalance(c.Request.Context(), &emptypb.Empty{})
+			if err != nil {
+				handleGrpcError(c, err)
+				return
+			}
+			respondProto(c, http.StatusOK, res)
+		})
+
+		authRoutes.POST("/wallet/topup", func(c *gin.Context) {
+			var req pb.TopUpRequest
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			res, err := financeClient.TopUpWallet(c.Request.Context(), &req)
+			if err != nil {
+				handleGrpcError(c, err)
+				return
+			}
+			respondProto(c, http.StatusOK, res)
+		})
+
+		authRoutes.GET("/wallet/transactions", func(c *gin.Context) {
+			res, err := financeClient.GetTransactionHistory(c.Request.Context(), &emptypb.Empty{})
+			if err != nil {
+				handleGrpcError(c, err)
+				return
+			}
+			respondProto(c, http.StatusOK, res)
+		})
 	}
+
+	r.POST("/webhooks/finance", func(c *gin.Context) {
+		data, err := c.GetRawData()
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
+			return
+		}
+
+		_, err = financeClient.HandleWalletWebhook(c.Request.Context(), &pb.WebhookRequest{
+			Event: "INVOICE_CALLBACK", // You can also extract this from headers if Xendit sends it
+			Data:  data,
+		})
+		if err != nil {
+			handleGrpcError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "received"})
+	})
+
+	r.POST("/jobs/payment-expiry-check", func(c *gin.Context) {
+		_, err := financeClient.CheckPaymentExpiry(c.Request.Context(), &emptypb.Empty{})
+		if err != nil {
+			handleGrpcError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"status": "expiry check completed"})
+	})
 
 	adminRoutes := r.Group("/admin", authForwarder)
 	{

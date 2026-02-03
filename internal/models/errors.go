@@ -1,6 +1,8 @@
 package models
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	ErrNotFound           = errors.New("resource not found")
@@ -8,4 +10,5 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrInternal           = errors.New("internal system error")
 	ErrInvalidInput       = errors.New("invalid input provided")
+	ErrInsufficientBalance = errors.New("insufficient balance")
 )

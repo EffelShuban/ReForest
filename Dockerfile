@@ -12,6 +12,7 @@ COPY . .
 RUN go build -o /bin/auth-service ./cmd/auth
 RUN go build -o /bin/api-gateway ./cmd/api
 RUN go build -o /bin/tree-management-service ./cmd/tree-management
+RUN go build -o /bin/finance-service ./cmd/finance
 
 FROM alpine:latest AS auth-service
 WORKDIR /root/
@@ -30,3 +31,9 @@ WORKDIR /root/
 COPY --from=builder /bin/tree-management-service .
 EXPOSE 50052
 CMD ["./tree-management-service"]
+
+FROM alpine:latest AS finance-service
+WORKDIR /root/
+COPY --from=builder /bin/finance-service .
+EXPOSE 50053
+CMD ["./finance-service"]
