@@ -154,7 +154,7 @@ func main() {
 			return
 		}
 
-		respondProto(c, http.StatusOK, res)
+		respondProto(c, http.StatusCreated, res)
 	})
 
 	r.POST("/auth/login", func(c *gin.Context) {
@@ -275,7 +275,7 @@ func main() {
 				handleGrpcError(c, err)
 				return
 			}
-			respondProto(c, http.StatusOK, res)
+			respondProto(c, http.StatusCreated, res)
 		})
 
 		authRoutes.GET("/wallet/transactions", func(c *gin.Context) {

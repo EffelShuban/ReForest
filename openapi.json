@@ -1,492 +1,884 @@
-openapi: 3.0.0
-info:
-  title: Tree Sponsorship API
-  description: API for managing tree adoptions, forest plots, and sponsor transactions.
-  version: 1.0.0
-
-servers:
-  - url: https:localhost:8080/
-    description: Development server
-
-components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-
-paths:
-  # --- AUTH SERVICE ---
-  /auth/login:
-    post:
-      summary: User Login
-      tags: [Auth]
-      responses:
-        200:
-          description: Returns JWT token and user role.
-
-  /auth/register:
-    post:
-      summary: User Registration
-      tags: [Auth]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                full_name: { type: string }
-                email: { type: string, format: email }
-                password: { type: string, format: password }
-      responses:
-        201:
-          description: User registered successfully.
-          
-  # --- TREE & PLOT MANAGEMENT ---
-  /species:
-    get:
-      summary: List available tree species
-      tags: [Tree Management]
-      responses:
-        200:
-          description: A list of species.
-
-  /species/{id}:
-    get:
-      summary: Get species details by ID
-      tags: [Tree Management]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      responses:
-        200:
-          description: Detailed information about the species.
-        404:
-          description: Species not found.
-
-  /admin/species:
-    post:
-      summary: Create a new tree species
-      security: [{ bearerAuth: [] }]
-      tags: [Tree Management]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                scientific_name: { type: string }
-                description: { type: string }
-                adoption_price: { type: number }
-      responses:
-        201:
-          description: Species created.
-
-  /admin/species/{id}:
-    put:
-      summary: Update a tree species
-      security: [{ bearerAuth: [] }]
-      tags: [Tree Management]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                scientific_name: { type: string }
-                description: { type: string }
-                adoption_price: { type: number }
-      responses:
-        200:
-          description: Species updated successfully.
-        404:
-          description: Species not found.
-    delete:
-      summary: Delete a tree species
-      security: [{ bearerAuth: [] }]
-      tags: [Tree Management]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      responses:
-        204:
-          description: Species deleted successfully.
-        404:
-          description: Species not found.
-
-  /plots:
-    get:
-      summary: List forest plots
-      tags: [Tree Management]
-      responses:
-        200:
-          description: A list of plots with available space.
-
-  /plots/{id}:
-    get:
-      summary: Get plot details by ID
-      tags: [Tree Management]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      responses:
-        200:
-          description: Detailed information about the plot.
-        404:
-          description: Plot not found.
-
-  /admin/plots:
-    post:
-      summary: Create a new forest plot
-      security: [{ bearerAuth: [] }]
-      tags: [Tree Management]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                location: { type: string }
-                capacity: { type: integer }
-      responses:
-        201:
-          description: Plot created.
-
-  /admin/plots/{id}:
-    put:
-      summary: Update a forest plot
-      security: [{ bearerAuth: [] }]
-      tags: [Tree Management]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                name: { type: string }
-                location: { type: string }
-                capacity: { type: integer }
-      responses:
-        200:
-          description: Plot updated successfully.
-        404:
-          description: Plot not found.
-    delete:
-      summary: Delete a forest plot
-      security: [{ bearerAuth: [] }]
-      tags: [Tree Management]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      responses:
-        204:
-          description: Plot deleted successfully.
-        404:
-          description: Plot not found.
-
-  /trees:
-    get:
-      summary: List all trees
-      tags: [Tree Management]
-      responses:
-        200:
-          description: List of all trees.
-    post:
-      summary: Adopt a new tree
-      security: [{ bearerAuth: [] }]
-      tags: [Tree Management]
-      description: Logic checks balance. If insufficient, returns a payment link.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                species_id: { type: string, format: uuid }
-                plot_id: { type: string, format: uuid }
-                custom_name: { type: string }
-      responses:
-        201:
-          description: Tree adopted successfully.
-        402:
-          description: Payment Required (Balance low, Xendit invoice generated).
-
-  /trees/{id}:
-    get:
-      summary: Get tree details
-      tags: [Tree Management]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      responses:
-        200:
-          description: Tree details.
-        404:
-          description: Tree not found.
-    
-  /trees/admin/{id}:
-    put:
-      summary: Update tree details
-      security: [{ bearerAuth: [] }]
-      tags: [Tree Management]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                custom_name: { type: string }
-                species_id: { type: string, format: uuid }
-                plot_id: { type: string, format: uuid }
-      responses:
-        200:
-          description: Tree updated successfully.
-        404:
-          description: Tree not found.
-    delete:
-      summary: Delete a tree
-      security: [{ bearerAuth: [] }]
-      tags: [Tree Management]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      responses:
-        204:
-          description: Tree deleted successfully.
-        404:
-          description: Tree not found.
-
-  /trees/{id}/logs:
-    get:
-      summary: Get tree maintenance/growth logs
-      tags: [Tree Management]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        200:
-          description: List of growth and care logs.
-    post:
-      summary: Add a log entry for a tree
-      security: [{ bearerAuth: [] }]
-      tags: [Tree Management]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                title: { type: string }
-                description: { type: string }
-                image_url: { type: string }
-      responses:
-        201:
-          description: Log entry created.
-
-  /logs/{id}:
-    put:
-      summary: Update a log entry
-      security: [{ bearerAuth: [] }]
-      tags: [Tree Management]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                title: { type: string }
-                description: { type: string }
-                image_url: { type: string }
-      responses:
-        200:
-          description: Log updated successfully.
-        404:
-          description: Log not found.
-    delete:
-      summary: Delete a log entry
-      security: [{ bearerAuth: [] }]
-      tags: [Tree Management]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: string, format: uuid }
-      responses:
-        204:
-          description: Log deleted successfully.
-        404:
-          description: Log not found.
-
-  # --- TRANSACTION & BALANCE ---
-  /transactions:
-    post:
-      summary: Create a manual transaction
-      security: [{ bearerAuth: [] }]
-      tags: [Finance]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                user_id: { type: string, format: uuid }
-                amount: { type: number }
-                type: { type: string, enum: ["DEPOSIT", "WITHDRAWAL", "PURCHASE"] }
-      responses:
-        201:
-          description: Transaction created.
-
-  /wallet/topup:
-    post:
-      summary: Deposit funds to wallet
-      security: [{ bearerAuth: [] }]
-      tags: [Finance]
-      responses:
-        200:
-          description: Returns Xendit payment URL.
-
-  /wallet/webhook:
-    post:
-      summary: Xendit Payment Callback
-      tags: [Finance]
-      description: Updates sponsor balance upon successful payment.
-      responses:
-        200:
-          description: Webhook received.
-
-  /wallet/balance:
-    get:
-      summary: Get user's current wallet balance
-      security: [{ bearerAuth: [] }]
-      tags: [Finance]
-      responses:
-        200:
-          description: Current wallet balance.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  balance: { type: number }
-
-  /transaction/history:
-    get:
-      summary: View transaction history
-      security: [{ bearerAuth: [] }]
-      tags: [Finance]
-      responses:
-        200:
-          description: List of all financial movements.
-
-  /jobs/biweekly-maintenance:
-    post:
-      summary: Trigger biweekly care log creation
-      tags: [Tree Management]
-      responses:
-        200:
-          description: Logs generated for pending trees.
-
-  /notify/send-reminder:
-    post:
-      summary: Send expiration reminder
-      tags: [Notifier]
-      description: Internal endpoint used to trigger a "1-hour left" alert.
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                transaction_id: { type: string, format: uuid }
-                sponsor_email: { type: string }
-                payment_url: { type: string }
-      responses:
-        200:
-          description: Notification sent successfully.
-
-  /notify/payment-success:
-    post:
-      summary: Send payment success notification
-      tags: [Notifier]
-      description: Internal endpoint to notify user of successful payment.
-      security: [{ bearerAuth: [] }]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                transaction_id: { type: string, format: uuid }
-                sponsor_email: { type: string }
-                amount: { type: number }
-      responses:
-        200:
-          description: Notification sent successfully.
-
-  /jobs/payment-expiry-check:
-    post:
-      summary: Scan for payments expiring in 1 hour
-      tags: [Finance]
-      description: >
-        Scheduled job (Cron) that finds transactions where status is PENDING 
-        and expiration is in T-60 minutes.
-      responses:
-        200:
-          description: Job completed; triggered reminders for matching transactions.
-        204:
-          description: No transactions currently requiring reminders.
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Reforest API",
+    "description": "API for managing tree adoptions, forest plots, and sponsor transactions for the Reforest project.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Development server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 6 },
+          "role": { "type": "string", "enum": ["ADMIN", "SPONSOR"] },
+          "full_name": { "type": "string" },
+          "date_of_birth": {
+            "type": "string",
+            "format": "date",
+            "example": "2000-01-30"
+          }
+        },
+        "required": ["email", "password", "role"]
+      },
+      "RegisterResponse": {
+        "type": "object",
+        "properties": {
+          "message": { "type": "string" },
+          "user_id": { "type": "string" }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string" }
+        },
+        "required": ["email", "password"]
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "token": { "type": "string" },
+          "role": { "type": "string" }
+        }
+      },
+      "Species": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "readOnly": true },
+          "common_name": { "type": "string" },
+          "space_required_m2": { "type": "number", "format": "float" },
+          "price": { "type": "integer" }
+        }
+      },
+      "SpeciesList": {
+        "type": "object",
+        "properties": {
+          "species": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Species" }
+          }
+        }
+      },
+      "Plot": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "readOnly": true },
+          "location_name": { "type": "string" },
+          "address": { "type": "string" },
+          "available_space_m2": { "type": "number", "format": "float" }
+        }
+      },
+      "PlotList": {
+        "type": "object",
+        "properties": {
+          "plots": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Plot" }
+          }
+        }
+      },
+      "Tree": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "sponsor_id": { "type": "string" },
+          "species_id": { "type": "string" },
+          "plot_id": { "type": "string" },
+          "custom_name": { "type": "string" },
+          "current_height_meters": { "type": "number", "format": "float" },
+          "total_funded_lifetime": { "type": "integer" },
+          "last_care_date": { "type": "string", "format": "date-time" },
+          "adopted_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "TreeList": {
+        "type": "object",
+        "properties": {
+          "trees": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Tree" }
+          }
+        }
+      },
+      "LogEntry": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "adopted_tree_id": { "type": "string" },
+          "admin_id": { "type": "string" },
+          "current_height_meters": { "type": "number", "format": "float" },
+          "activity": { "type": "string" },
+          "note": { "type": "string" },
+          "recorded_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateLogRequest": {
+        "type": "object",
+        "properties": {
+          "adopted_tree_id": {
+            "type": "string",
+            "description": "This is ignored, the ID from the path is used."
+          },
+          "current_height_meters": { "type": "number", "format": "float" },
+          "activity": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      },
+      "LogList": {
+        "type": "object",
+        "properties": {
+          "logs": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/LogEntry" }
+          }
+        }
+      },
+      "AdoptTreeRequest": {
+        "type": "object",
+        "properties": {
+          "species_id": { "type": "string" },
+          "plot_id": { "type": "string" },
+          "custom_name": { "type": "string" }
+        }
+      },
+      "AdoptTreeResponse": {
+        "type": "object",
+        "properties": {
+          "tree_id": { "type": "string" },
+          "payment_url": { "type": "string" },
+          "invoice_id": { "type": "string" }
+        }
+      },
+      "BalanceResponse": {
+        "type": "object",
+        "properties": {
+          "balance": { "type": "number" }
+        }
+      },
+      "TopUpRequest": {
+        "type": "object",
+        "properties": {
+          "amount": { "type": "integer" },
+          "duration_seconds": { "type": "integer" }
+        }
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "user_id": { "type": "string" },
+          "amount": { "type": "integer" },
+          "type": { "type": "string" },
+          "status": { "type": "string" },
+          "payment_url": { "type": "string" },
+          "expires_at": { "type": "string", "format": "date-time" },
+          "reference_id": { "type": "string" },
+          "invoice_id": { "type": "string" }
+        }
+      },
+      "TransactionList": {
+        "type": "object",
+        "properties": {
+          "transactions": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Transaction" }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    { "name": "Auth", "description": "Authentication endpoints" },
+    { "name": "Public", "description": "Publicly accessible data endpoints" },
+    {
+      "name": "Sponsor",
+      "description": "Endpoints for authenticated sponsors"
+    },
+    { "name": "Admin", "description": "Endpoints for administrative tasks" },
+    {
+      "name": "Webhooks",
+      "description": "Endpoints for external service callbacks"
+    },
+    { "name": "Jobs", "description": "Endpoints for triggering scheduled jobs" }
+  ],
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "summary": "User Registration",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RegisterResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "User Login",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Returns JWT token and user role.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponse" }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/species": {
+      "get": {
+        "summary": "List available tree species",
+        "tags": ["Public"],
+        "responses": {
+          "200": {
+            "description": "A list of species.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SpeciesList" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/species/{id}": {
+      "get": {
+        "summary": "Get species details by ID",
+        "tags": ["Public"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detailed information about the species.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Species" }
+              }
+            }
+          },
+          "404": { "description": "Species not found." }
+        }
+      }
+    },
+    "/plots": {
+      "get": {
+        "summary": "List forest plots",
+        "tags": ["Public"],
+        "responses": {
+          "200": {
+            "description": "A list of plots with available space.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PlotList" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/plots/{id}": {
+      "get": {
+        "summary": "Get plot details by ID",
+        "tags": ["Public"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Detailed information about the plot.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Plot" }
+              }
+            }
+          },
+          "404": { "description": "Plot not found." }
+        }
+      }
+    },
+    "/trees": {
+      "get": {
+        "summary": "List all adopted trees",
+        "tags": ["Public"],
+        "responses": {
+          "200": {
+            "description": "List of all trees.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TreeList" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Adopt a new tree",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Sponsor"],
+        "description": "Sponsor action. Creates an adoption intent and returns a payment response. The user's role must be 'SPONSOR'.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AdoptTreeRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Adoption intent created, payment required.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AdoptTreeResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthenticated" },
+          "403": { "description": "Permission Denied (not a SPONSOR)" }
+        }
+      }
+    },
+    "/trees/{id}": {
+      "get": {
+        "summary": "Get tree details",
+        "tags": ["Public"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tree details.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Tree" }
+              }
+            }
+          },
+          "404": { "description": "Tree not found." }
+        }
+      }
+    },
+    "/trees/{id}/logs": {
+      "get": {
+        "summary": "Get tree maintenance/growth logs",
+        "tags": ["Public"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of growth and care logs.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LogList" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/wallet/balance": {
+      "get": {
+        "summary": "Get user's current wallet balance",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Sponsor"],
+        "responses": {
+          "200": {
+            "description": "Current wallet balance.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BalanceResponse" }
+              }
+            }
+          },
+          "401": { "description": "Unauthenticated" }
+        }
+      }
+    },
+    "/wallet/topup": {
+      "post": {
+        "summary": "Top up wallet balance",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Sponsor"],
+        "description": "Generates a Xendit invoice to top up the user's wallet.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TopUpRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invoice created. Returns a transaction object with a Xendit payment URL.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Transaction" }
+              }
+            }
+          },
+          "401": { "description": "Unauthenticated" }
+        }
+      }
+    },
+    "/wallet/transactions": {
+      "get": {
+        "summary": "View transaction history",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Sponsor"],
+        "responses": {
+          "200": {
+            "description": "List of all financial movements for the user.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TransactionList" }
+              }
+            }
+          },
+          "401": { "description": "Unauthenticated" }
+        }
+      }
+    },
+    "/webhooks/finance": {
+      "post": {
+        "summary": "Xendit Payment Callback",
+        "tags": ["Webhooks"],
+        "description": "Webhook endpoint for Xendit to post invoice status updates (e.g., PAID, EXPIRED).",
+        "requestBody": {
+          "description": "Xendit invoice callback payload",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Webhook received.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs/payment-expiry-check": {
+      "post": {
+        "summary": "Trigger check for expired payments",
+        "tags": ["Jobs"],
+        "description": "Manually trigger the job that scans for and marks pending payments as expired.",
+        "responses": {
+          "200": {
+            "description": "Job completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/species": {
+      "post": {
+        "summary": "Create a new tree species",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Admin"],
+        "description": "Admin action. User role must be 'ADMIN'.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Species" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Species created.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Species" }
+              }
+            }
+          },
+          "401": { "description": "Unauthenticated" },
+          "403": { "description": "Permission Denied" }
+        }
+      }
+    },
+    "/admin/species/{id}": {
+      "put": {
+        "summary": "Update a tree species",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Admin"],
+        "description": "Admin action. User role must be 'ADMIN'.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Species" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Species updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Species" }
+              }
+            }
+          },
+          "404": { "description": "Species not found." }
+        }
+      },
+      "delete": {
+        "summary": "Delete a tree species",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Admin"],
+        "description": "Admin action. User role must be 'ADMIN'.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Species deleted successfully." },
+          "404": { "description": "Species not found." }
+        }
+      }
+    },
+    "/admin/plots": {
+      "post": {
+        "summary": "Create a new forest plot",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Admin"],
+        "description": "Admin action. User role must be 'ADMIN'.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Plot" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Plot created.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Plot" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/plots/{id}": {
+      "put": {
+        "summary": "Update a forest plot",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Admin"],
+        "description": "Admin action. User role must be 'ADMIN'.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Plot" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Plot updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Plot" }
+              }
+            }
+          },
+          "404": { "description": "Plot not found." }
+        }
+      },
+      "delete": {
+        "summary": "Delete a forest plot",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Admin"],
+        "description": "Admin action. User role must be 'ADMIN'.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Plot deleted successfully." },
+          "404": { "description": "Plot not found." }
+        }
+      }
+    },
+    "/admin/trees/{id}": {
+      "put": {
+        "summary": "Update tree details (Admin)",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Admin"],
+        "description": "Admin action. User role must be 'ADMIN'.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Tree" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tree updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Tree" }
+              }
+            }
+          },
+          "404": { "description": "Tree not found." }
+        }
+      },
+      "delete": {
+        "summary": "Delete a tree (Admin)",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Admin"],
+        "description": "Admin action. User role must be 'ADMIN'.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Tree deleted successfully." },
+          "404": { "description": "Tree not found." }
+        }
+      }
+    },
+    "/admin/trees/{id}/logs": {
+      "post": {
+        "summary": "Add a log entry for a tree (Admin)",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Admin"],
+        "description": "Admin action. User role must be 'ADMIN'.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateLogRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Log entry created.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LogEntry" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/admin/logs/{id}": {
+      "put": {
+        "summary": "Update a log entry (Admin)",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Admin"],
+        "description": "Admin action. User role must be 'ADMIN'.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LogEntry" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Log updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/LogEntry" }
+              }
+            }
+          },
+          "404": { "description": "Log not found." }
+        }
+      },
+      "delete": {
+        "summary": "Delete a log entry (Admin)",
+        "security": [{ "bearerAuth": [] }],
+        "tags": ["Admin"],
+        "description": "Admin action. User role must be 'ADMIN'.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Log deleted successfully." },
+          "404": { "description": "Log not found." }
+        }
+      }
+    }
+  }
+}
