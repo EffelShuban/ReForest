@@ -21,7 +21,6 @@ type Config struct {
 	MailtrapUser    string
 	MailtrapPass    string
 	MailtrapFrom    string
-	RabbitMQURL     string
 }
 
 func Load() *Config {
