@@ -2,12 +2,17 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"log"
 	"reforest/internal/models"
 	"reforest/internal/repository"
+	"reforest/pkg/mq"
 	"reforest/pkg/pb"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -24,7 +29,7 @@ type TreeManagementService interface {
 	UpdatePlot(ctx context.Context, id primitive.ObjectID, req *pb.Plot) (*models.Plot, error)
 	DeletePlot(ctx context.Context, id primitive.ObjectID) error
 
-	AdoptTree(ctx context.Context, req *pb.AdoptTreeRequest, sponsorID string) (*models.Tree, error)
+	AdoptTree(ctx context.Context, req *pb.AdoptTreeRequest, sponsorID string) (*models.AdoptionIntent, string, string, error)
 	GetTree(ctx context.Context, id primitive.ObjectID) (*models.Tree, error)
 	ListTrees(ctx context.Context) ([]*models.Tree, error)
 	UpdateTree(ctx context.Context, id primitive.ObjectID, req *pb.Tree) (*models.Tree, error)
@@ -34,15 +39,17 @@ type TreeManagementService interface {
 	GetLogsByTreeID(ctx context.Context, treeID primitive.ObjectID) ([]*models.LogEntry, error)
 	UpdateLog(ctx context.Context, id primitive.ObjectID, req *pb.LogEntry) (*models.LogEntry, error)
 	DeleteLog(ctx context.Context, id primitive.ObjectID) error
+	StartConsumers()
 }
 
 type treeManagementService struct {
 	repo          repository.TreeManagementRepository
 	financeClient pb.FinanceServiceClient
+	mqClient      *mq.Client
 }
 
-func NewTreeManagementService(repo repository.TreeManagementRepository, financeClient pb.FinanceServiceClient) TreeManagementService {
-	return &treeManagementService{repo: repo, financeClient: financeClient}
+func NewTreeManagementService(repo repository.TreeManagementRepository, financeClient pb.FinanceServiceClient, mqClient *mq.Client) TreeManagementService {
+	return &treeManagementService{repo: repo, financeClient: financeClient, mqClient: mqClient}
 }
 
 func (s *treeManagementService) CreateSpecies(ctx context.Context, req *pb.Species) (*models.Species, error) {
@@ -107,27 +114,65 @@ func (s *treeManagementService) DeletePlot(ctx context.Context, id primitive.Obj
 	return s.repo.DeletePlot(ctx, id)
 }
 
-func (s *treeManagementService) AdoptTree(ctx context.Context, req *pb.AdoptTreeRequest, sponsorID string) (*models.Tree, error) {
+func (s *treeManagementService) AdoptTree(ctx context.Context, req *pb.AdoptTreeRequest, sponsorID string) (*models.AdoptionIntent, string, string, error) {
 	speciesID, err := primitive.ObjectIDFromHex(req.SpeciesId)
 	if err != nil {
-		return nil, models.ErrInvalidInput
+		return nil, "", "", models.ErrInvalidInput
+<<<<<<< HEAD
+	}
+
+	plotID, err := primitive.ObjectIDFromHex(req.PlotId)
+	if err != nil {
+		return nil, "", "", models.ErrInvalidInput
+	}
+
+	species, err := s.repo.GetSpecies(ctx, speciesID)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+=======
 	}
 	plotID, err := primitive.ObjectIDFromHex(req.PlotId)
 	if err != nil {
-		return nil, models.ErrInvalidInput
+		return nil, "", "", models.ErrInvalidInput
 	}
 
-	tree := &models.Tree{
-		SponsorID:           sponsorID,
-		SpeciesID:           speciesID,
-		PlotID:              plotID,
-		CustomName:          req.CustomName,
-		CurrentHeightMeters: 0,
-		TotalFundedLifetime: 0,
-		LastCareDate:        time.Now(),
-		AdoptedAt:           time.Now(),
+	species, err := s.repo.GetSpecies(ctx, speciesID)
+	if err != nil {
+		return nil, "", "", err
 	}
-	return s.repo.CreateTree(ctx, tree)
+
+	// 1. Create Intent
+>>>>>>> 42f8974 (feat: message broker)
+	intent := &models.AdoptionIntent{
+		SponsorID:  sponsorID,
+		SpeciesID:  speciesID,
+		PlotID:     plotID,
+		CustomName: req.CustomName,
+		Status:     "PENDING",
+		CreatedAt:  time.Now(),
+	}
+	intent, err = s.repo.CreateAdoptionIntent(ctx, intent)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+<<<<<<< HEAD
+=======
+	// 2. Request Payment (Invoice)
+>>>>>>> 42f8974 (feat: message broker)
+	tx, err := s.financeClient.CreateTransaction(ctx, &pb.TransactionRequest{
+		UserId:      sponsorID,
+		Amount:      int64(species.Price),
+		Type:        pb.TransactionType_ADOPT,
+		ReferenceId: intent.ID.Hex(),
+	})
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	return intent, tx.PaymentUrl, tx.InvoiceId, nil
 }
 
 func (s *treeManagementService) GetTree(ctx context.Context, id primitive.ObjectID) (*models.Tree, error) {
@@ -136,7 +181,6 @@ func (s *treeManagementService) GetTree(ctx context.Context, id primitive.Object
 		return nil, err
 	}
 
-	// Populate CurrentHeightMeters from Logs
 	logs, err := s.repo.GetLogsByTreeID(ctx, tree.ID)
 	if err == nil && len(logs) > 0 {
 		var maxHeight float64
@@ -148,11 +192,18 @@ func (s *treeManagementService) GetTree(ctx context.Context, id primitive.Object
 		tree.CurrentHeightMeters = maxHeight
 	}
 
-	txList, err := s.financeClient.GetTransactionHistory(ctx, &emptypb.Empty{})
+	/*Create a new context for the gRPC call, with metadata containing the tree's sponsor ID.
+	This ensures we get the transaction history for the correct user, as GetTree is a public endpoint.*/
+	md := metadata.New(map[string]string{"x-user-id": tree.SponsorID})
+	clientCtx := metadata.NewOutgoingContext(ctx, md)
+	txList, err := s.financeClient.GetTransactionHistory(clientCtx, &emptypb.Empty{})
 	if err == nil && txList != nil {
 		var totalFunded int32
+		treeIDHex := tree.ID.Hex()
 		for _, tx := range txList.Transactions {
-			totalFunded += int32(tx.Amount)
+			if tx.ReferenceId == treeIDHex {
+				totalFunded += int32(tx.Amount)
+			}
 		}
 		tree.TotalFundedLifetime = totalFunded
 	}
@@ -166,17 +217,13 @@ func (s *treeManagementService) ListTrees(ctx context.Context) ([]*models.Tree, 
 		return nil, err
 	}
 
-	// Populate computed fields for each tree
-	// Note: In production, this N+1 query pattern should be optimized with batch fetching
 	for _, tree := range trees {
-		// Re-use GetTree logic or simplified version
 		logs, _ := s.repo.GetLogsByTreeID(ctx, tree.ID)
 		for _, log := range logs {
 			if log.CurrentHeightMeters > tree.CurrentHeightMeters {
 				tree.CurrentHeightMeters = log.CurrentHeightMeters
 			}
 		}
-		// Skipping transaction fetch per tree for list to avoid excessive overhead
 	}
 	return trees, nil
 }
@@ -197,8 +244,6 @@ func (s *treeManagementService) UpdateTree(ctx context.Context, id primitive.Obj
 		SpeciesID:           speciesID,
 		PlotID:              plotID,
 		CustomName:          req.CustomName,
-		CurrentHeightMeters: float64(req.CurrentHeightMeters), // Mapped from proto
-		TotalFundedLifetime: req.TotalFundedLifetime,          // Mapped from proto
 		LastCareDate:        req.LastCareDate.AsTime(),
 		AdoptedAt:           req.AdoptedAt.AsTime(),
 	}
@@ -250,4 +295,92 @@ func (s *treeManagementService) UpdateLog(ctx context.Context, id primitive.Obje
 
 func (s *treeManagementService) DeleteLog(ctx context.Context, id primitive.ObjectID) error {
 	return s.repo.DeleteLog(ctx, id)
+}
+
+func (s *treeManagementService) StartConsumers() {
+	err := s.mqClient.Consume("payment.success", func(data []byte) error {
+		var event struct {
+			ReferenceID string `json:"reference_id"`
+		}
+		if err := json.Unmarshal(data, &event); err != nil {
+			return err
+		}
+		
+		intentID, err := primitive.ObjectIDFromHex(event.ReferenceID)
+		if err != nil { return err }
+
+		intent, err := s.repo.GetAdoptionIntent(context.Background(), intentID)
+		if err != nil { return err }
+
+<<<<<<< HEAD
+		tree := &models.Tree{
+			ID:                  intent.ID,
+=======
+		// Create the actual Tree
+		tree := &models.Tree{
+>>>>>>> 42f8974 (feat: message broker)
+			SponsorID:           intent.SponsorID,
+			SpeciesID:           intent.SpeciesID,
+			PlotID:              intent.PlotID,
+			CustomName:          intent.CustomName,
+<<<<<<< HEAD
+=======
+			CurrentHeightMeters: 0,
+			TotalFundedLifetime: 0,
+>>>>>>> 42f8974 (feat: message broker)
+			LastCareDate:        time.Now(),
+			AdoptedAt:           time.Now(),
+		}
+		createdTree, err := s.repo.CreateTree(context.Background(), tree)
+		if err != nil { return err }
+
+<<<<<<< HEAD
+=======
+		// Create Initial Log
+>>>>>>> 42f8974 (feat: message broker)
+		_, _ = s.repo.CreateLog(context.Background(), &models.LogEntry{
+			AdoptedTreeID:       createdTree.ID,
+			Activity:            "Tree Planted",
+			Note:                fmt.Sprintf("Tree adopted by %s", intent.SponsorID),
+			RecordedAt:          time.Now(),
+			CurrentHeightMeters: 0.5,
+		})
+<<<<<<< HEAD
+
+		if err := s.repo.UpdateAdoptionIntentStatus(context.Background(), intent.ID, "COMPLETED"); err != nil {
+			log.Printf("WARN: failed to update adoption intent %s status to COMPLETED: %v", intent.ID.Hex(), err)
+		}
+
+=======
+>>>>>>> 42f8974 (feat: message broker)
+		return nil
+	})
+	if err != nil {
+		log.Printf("Failed to start consumers: %v", err)
+	}
+
+	err = s.mqClient.Consume("payment.expired", func(data []byte) error {
+		var event struct {
+			ReferenceID string `json:"reference_id"`
+		}
+		if err := json.Unmarshal(data, &event); err != nil {
+			return err
+		}
+
+		intentID, err := primitive.ObjectIDFromHex(event.ReferenceID)
+		if err != nil {
+			return err
+		}
+
+<<<<<<< HEAD
+=======
+		// Mark the intent as expired instead of deleting, which is better for auditing.
+>>>>>>> 42f8974 (feat: message broker)
+		log.Printf("Payment expired for adoption intent %s. Marking as EXPIRED.", intentID.Hex())
+		return s.repo.UpdateAdoptionIntentStatus(context.Background(), intentID, "EXPIRED")
+	})
+
+	if err != nil {
+		log.Printf("Failed to start payment.expired consumer: %v", err)
+	}
 }

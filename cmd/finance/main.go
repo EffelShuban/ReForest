@@ -12,6 +12,7 @@ import (
 	"reforest/internal/repository"
 	"reforest/internal/service"
 	"reforest/pkg/database"
+	"reforest/pkg/mq"
 	"reforest/pkg/pb"
 	"reforest/pkg/utils"
 
@@ -30,8 +31,14 @@ func main() {
 
 	jwtProvider := utils.NewJWTProvider(cfg.JWTSecret)
 
+	mqClient, err := mq.NewClient(cfg.RabbitMQURL)
+	if err != nil {
+		log.Fatalf("failed to connect to rabbitmq: %v", err)
+	}
+	defer mqClient.Close()
+
 	financeRepo := repository.NewFinanceRepository(db)
-	financeSvc := service.NewFinanceService(financeRepo, cfg.XenditAPIKey)
+	financeSvc := service.NewFinanceService(financeRepo, cfg.XenditAPIKey, mqClient)
 	financeHandler := grpc.NewFinanceHandler(financeSvc)
 
 	go func() {
@@ -55,12 +62,17 @@ func main() {
 		"/finance.FinanceService/CheckPaymentExpiry":    true,
 	}
 
-	adminMethods := map[string]bool{
+	adminMethods := map[string]bool{}
+
+	sponsorMethods := map[string]bool{
 		"/finance.FinanceService/CreateTransaction": true,
+		"/finance.FinanceService/TopUpWallet":       true,
+		"/finance.FinanceService/GetBalance":        true,
+		"/finance.FinanceService/GetTransactionHistory": true,
 	}
 
 	s := googleGrpc.NewServer(
-		googleGrpc.UnaryInterceptor(grpc.AuthInterceptor(jwtProvider, publicMethods, adminMethods, nil)),
+		googleGrpc.UnaryInterceptor(grpc.AuthInterceptor(jwtProvider, publicMethods, adminMethods, sponsorMethods)),
 	)
 	pb.RegisterFinanceServiceServer(s, financeHandler)
 

@@ -119,5 +119,6 @@ func mapTransactionToProto(tx *models.Transaction) *pb.Transaction {
 		Status:     tx.Payment.Status,
 		PaymentUrl: tx.Payment.PaymentURL,
 		ExpiresAt:  timestamppb.New(tx.Payment.ExpiresAt),
+		InvoiceId:  tx.ID.String(),
 	}
 }

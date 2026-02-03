@@ -507,6 +507,7 @@ type AdoptTreeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	TreeId        string                 `protobuf:"bytes,1,opt,name=tree_id,json=treeId,proto3" json:"tree_id,omitempty"`
 	PaymentUrl    string                 `protobuf:"bytes,2,opt,name=payment_url,json=paymentUrl,proto3" json:"payment_url,omitempty"`
+	InvoiceId     string                 `protobuf:"bytes,3,opt,name=invoice_id,json=invoiceId,proto3" json:"invoice_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -551,6 +552,13 @@ func (x *AdoptTreeResponse) GetTreeId() string {
 func (x *AdoptTreeResponse) GetPaymentUrl() string {
 	if x != nil {
 		return x.PaymentUrl
+	}
+	return ""
+}
+
+func (x *AdoptTreeResponse) GetInvoiceId() string {
+	if x != nil {
+		return x.InvoiceId
 	}
 	return ""
 }
@@ -804,11 +812,13 @@ const file_proto_tree_management_service_proto_rawDesc = "" +
 	"species_id\x18\x01 \x01(\tR\tspeciesId\x12\x17\n" +
 	"\aplot_id\x18\x02 \x01(\tR\x06plotId\x12\x1f\n" +
 	"\vcustom_name\x18\x03 \x01(\tR\n" +
-	"customName\"M\n" +
+	"customName\"l\n" +
 	"\x11AdoptTreeResponse\x12\x17\n" +
 	"\atree_id\x18\x01 \x01(\tR\x06treeId\x12\x1f\n" +
 	"\vpayment_url\x18\x02 \x01(\tR\n" +
-	"paymentUrl\"\xfe\x01\n" +
+	"paymentUrl\x12\x1d\n" +
+	"\n" +
+	"invoice_id\x18\x03 \x01(\tR\tinvoiceId\"\xfe\x01\n" +
 	"\bLogEntry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12&\n" +
 	"\x0fadopted_tree_id\x18\x02 \x01(\tR\radoptedTreeId\x12\x19\n" +

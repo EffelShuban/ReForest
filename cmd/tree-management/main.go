@@ -10,6 +10,7 @@ import (
 	"reforest/internal/delivery/grpc"
 	"reforest/internal/repository"
 	"reforest/internal/service"
+	"reforest/pkg/mq"
 	"reforest/pkg/pb"
 	"reforest/pkg/utils"
 
@@ -17,7 +18,16 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	googleGrpc "google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
+
+func metadataForwardingInterceptor(ctx context.Context, method string, req, reply interface{}, cc *googleGrpc.ClientConn, invoker googleGrpc.UnaryInvoker, opts ...googleGrpc.CallOption) error {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if ok {
+		ctx = metadata.NewOutgoingContext(ctx, md)
+	}
+	return invoker(ctx, method, req, reply, cc, opts...)
+}
 
 func main() {
 	cfg := config.Load()
@@ -30,16 +40,26 @@ func main() {
 	}
 	db := mongoClient.Database("reforest_db")
 
-	financeConn, err := googleGrpc.NewClient("finance-service:50053", googleGrpc.WithTransportCredentials(insecure.NewCredentials()))
+	financeConn, err := googleGrpc.NewClient("finance-service:50053",
+		googleGrpc.WithTransportCredentials(insecure.NewCredentials()),
+		googleGrpc.WithUnaryInterceptor(metadataForwardingInterceptor),
+	)
 	if err != nil {
 		log.Fatalf("failed to connect to finance service: %v", err)
 	}
 	defer financeConn.Close()
 	financeClient := pb.NewFinanceServiceClient(financeConn)
 
+	mqClient, err := mq.NewClient(cfg.RabbitMQURL)
+	if err != nil {
+		log.Fatalf("failed to connect to rabbitmq: %v", err)
+	}
+	defer mqClient.Close()
+
 	jwtProvider := utils.NewJWTProvider(cfg.JWTSecret)
 	treeRepo := repository.NewTreeManagementRepository(db)
-	treeSvc := service.NewTreeManagementService(treeRepo, financeClient)
+	treeSvc := service.NewTreeManagementService(treeRepo, financeClient, mqClient)
+	treeSvc.StartConsumers()
 	treeHandler := grpc.NewTreeManagementHandler(treeSvc)
 
 	lis, err := net.Listen("tcp", cfg.TreeGRPCPort)

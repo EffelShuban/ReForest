@@ -1,13 +1,17 @@
 erDiagram
     USER ||--o| PROFILE : "has"
     USER ||--o{ ADOPTED_TREE : "(sponsor) owns"
+    USER ||--o{ ADOPTION_INTENT : "(sponsor) initiates"
     USER ||--o{ TREE_LOG : "(admin) create"
     
-    PROFILE ||--o{ TRANSACTION : "executes"
+    USER ||--o{ TRANSACTION : "executes"
     
     TRANSACTION ||--o| PAYMENT : "generates"
-    TRANSACTION }o--|| ADOPTED_TREE : "targets"
+    TRANSACTION }o--|| ADOPTION_INTENT : "references"
     
+    ADOPTION_INTENT }o--|| TREE_SPECIES : "selects"
+    ADOPTION_INTENT }o--|| FOREST_PLOT : "reserves"
+
     ADOPTED_TREE }o--|| TREE_SPECIES : "is species"
     ADOPTED_TREE }o--|| FOREST_PLOT : "planted in"
     ADOPTED_TREE ||--o{ TREE_LOG : "has history"
@@ -35,15 +39,16 @@ erDiagram
         string external_id
         string payment_url
         timestamp created_at
+        timestamp expires_at
     }
 
     TRANSACTION {
         uuid id PK
-        uuid profile_id FK
-        uuid adopted_tree_id FK
+        uuid user_id FK
+        string reference_id "FK to AdoptionIntent"
         int amount
-        string type
-        timestamp transaction_date
+        string type "DEPOSIT | ADOPT | CARE"
+        timestamp created_at
     }
 
     FOREST_PLOT {
@@ -60,12 +65,26 @@ erDiagram
         int price
     }
 
-    ADOPTED_TREE {
+    ADOPTION_INTENT {
         uuid id PK
-        uuid user_id FK
+        uuid sponsor_id FK
         uuid species_id FK
         uuid plot_id FK
         string custom_name
+        string status "PENDING | EXPIRED | FULFILLED"
+        timestamp created_at
+    }
+
+    ADOPTED_TREE {
+        uuid id PK
+        uuid sponsor_id FK
+        uuid species_id FK
+        uuid plot_id FK
+        string custom_name
+        float current_height_meters
+        int total_funded_lifetime
+        timestamp last_care_date
+        timestamp adopted_at
     }
 
     TREE_LOG {
@@ -75,5 +94,5 @@ erDiagram
         float current_height_meters
         string activity
         string note
-        timestamp created_at
+        timestamp recorded_at
     }

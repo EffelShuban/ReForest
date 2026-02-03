@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"reforest/internal/models"
 	"reforest/internal/repository"
+	"reforest/pkg/mq"
 	"reforest/pkg/pb"
 	"time"
 
@@ -27,6 +29,7 @@ type FinanceService interface {
 type financeService struct {
 	repo         repository.FinanceRepository
 	xenditAPIKey string
+	mqClient     *mq.Client
 }
 
 type xenditInvoiceRequest struct {
@@ -43,10 +46,11 @@ type xenditInvoiceResponse struct {
 	ExpiryDate string `json:"expiry_date"`
 }
 
-func NewFinanceService(repo repository.FinanceRepository, xenditAPIKey string) FinanceService {
+func NewFinanceService(repo repository.FinanceRepository, xenditAPIKey string, mqClient *mq.Client) FinanceService {
 	return &financeService{
 		repo:         repo,
 		xenditAPIKey: xenditAPIKey,
+		mqClient:     mqClient,
 	}
 }
 
@@ -56,43 +60,86 @@ func (s *financeService) CreateTransaction(ctx context.Context, req *pb.Transact
 		return nil, errors.New("invalid user id")
 	}
 
-	tx := &models.Transaction{
-		UserID: userID,
-		Amount: req.Amount,
-		Type:   req.Type.String(),
-		Payment: models.Payment{
-			Amount: req.Amount,
-			Status: "SUCCESS",
-		},
-	}
-
-	if err := s.repo.CreateTransaction(ctx, tx); err != nil {
-		return nil, err
-	}
-
-	if req.Type == pb.TransactionType_DEPOSIT {
-		if err := s.repo.UpdateWalletBalance(ctx, userID, req.Amount); err != nil {
-			return nil, fmt.Errorf("failed to update wallet balance for deposit: %w", err)
+	switch req.Type {
+	case pb.TransactionType_ADOPT:
+<<<<<<< HEAD
+=======
+		// Check user balance first
+>>>>>>> 42f8974 (feat: message broker)
+		balance, err := s.repo.GetUserBalance(ctx, userID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get user balance: %w", err)
 		}
-	} else if req.Type == pb.TransactionType_WITHDRAWAL || req.Type == pb.TransactionType_PURCHASE {
-		if err := s.repo.UpdateWalletBalance(ctx, userID, -req.Amount); err != nil {
-			return nil, fmt.Errorf("failed to update wallet balance for withdrawal/purchase: %w", err)
+
+		log.Printf("[CreateTransaction] User: %s, Balance: %d, Required: %d", userID, balance, req.Amount)
+
+		if balance >= req.Amount {
+<<<<<<< HEAD
+=======
+			// Sufficient balance: deduct from wallet and complete transaction
+>>>>>>> 42f8974 (feat: message broker)
+			tx := &models.Transaction{
+				UserID:      userID,
+				Amount:      req.Amount,
+				Type:        req.Type.String(),
+				ReferenceID: req.ReferenceId,
+				Payment: models.Payment{
+					Amount: req.Amount,
+					Status: "SUCCESS",
+				},
+			}
+			if err := s.repo.CreateTransaction(ctx, tx); err != nil {
+				return nil, err
+			}
+			if err := s.repo.UpdateWalletBalance(ctx, userID, -req.Amount); err != nil {
+<<<<<<< HEAD
+				return nil, fmt.Errorf("failed to update wallet balance for adoption: %w", err)
+			}
+
+=======
+				// TODO: Implement rollback for transaction creation
+				return nil, fmt.Errorf("failed to update wallet balance for adoption: %w", err)
+			}
+
+			// Publish success event immediately
+>>>>>>> 42f8974 (feat: message broker)
+			_ = s.mqClient.Publish(ctx, "payment.success", map[string]string{"reference_id": tx.ReferenceID})
+
+			return tx, nil
 		}
+<<<<<<< HEAD
+		return s.createInvoiceTransaction(ctx, userID, req.Amount, "ADOPT", req.ReferenceId, 86400)
+
+	case pb.TransactionType_CARE:
+		// TODO: Implement care if time suffice
+=======
+		// Insufficient balance: create an invoice for external payment
+		return s.createInvoiceTransaction(ctx, userID, req.Amount, "ADOPT", req.ReferenceId, 86400)
+
+	case pb.TransactionType_CARE:
+		// ... existing logic for care ...
+>>>>>>> 42f8974 (feat: message broker)
+		return nil, errors.New("CARE transaction type not implemented")
 	}
 
-	return tx, nil
+	return nil, fmt.Errorf("unhandled transaction type: %s", req.Type.String())
 }
 
 func (s *financeService) TopUpWallet(ctx context.Context, userID uuid.UUID, amount int64, duration int32) (*models.Transaction, error) {
+	return s.createInvoiceTransaction(ctx, userID, amount, "DEPOSIT", "", int(duration))
+}
+
+func (s *financeService) createInvoiceTransaction(ctx context.Context, userID uuid.UUID, amount int64, txType string, refID string, duration int) (*models.Transaction, error) {
 	invoiceDuration := int(duration)
 	if invoiceDuration <= 0 {
-		invoiceDuration = 86400 // Default 24 hours
+		invoiceDuration = 86400 // equals 24 hours
 	}
 
 	tx := &models.Transaction{
 		UserID:    userID,
 		Amount:    amount,
-		Type:      "DEPOSIT", // TopUp is always a deposit
+		Type:      txType,
+		ReferenceID: refID,
 		Payment: models.Payment{
 			Amount:    amount,
 			Status:    "PENDING",
@@ -107,7 +154,7 @@ func (s *financeService) TopUpWallet(ctx context.Context, userID uuid.UUID, amou
 	reqBody := xenditInvoiceRequest{
 		ExternalID:      tx.ID.String(),
 		Amount:          float64(amount),
-		Description:     fmt.Sprintf("Topup Wallet %s", userID.String()),
+		Description:     fmt.Sprintf("%s - User %s", txType, userID.String()),
 		InvoiceDuration: invoiceDuration,
 		Currency:        "IDR",
 	}
@@ -189,6 +236,18 @@ func (s *financeService) HandleWalletWebhook(ctx context.Context, event string, 
 			return err
 		}
 
+<<<<<<< HEAD
+		if tx.Type == "ADOPT" {
+			_ = s.mqClient.Publish(ctx, "payment.success", map[string]string{"reference_id": tx.ReferenceID})
+=======
+		// If ADOPT, publish event
+		if tx.Type == "ADOPT" {
+			_ = s.mqClient.Publish(ctx, "payment.success", map[string]string{"reference_id": tx.ReferenceID})
+			// Do not credit wallet for adoption payments
+>>>>>>> 42f8974 (feat: message broker)
+			return nil
+		}
+
 		return s.repo.UpdateWalletBalance(ctx, tx.UserID, tx.Amount)
 	} else if payload.Status == "EXPIRED" {
 		return s.repo.UpdateTransactionStatus(ctx, txID, "EXPIRED")
@@ -217,8 +276,15 @@ func (s *financeService) CheckPaymentExpiry(ctx context.Context) error {
 
 	for _, tx := range txs {
 		if err := s.repo.UpdateTransactionStatus(ctx, tx.ID, "EXPIRED"); err != nil {
-			// Log error but continue
+			// TODO: Log error
 			continue
+		}
+<<<<<<< HEAD
+=======
+		// If it was an adoption, publish an expiry event
+>>>>>>> 42f8974 (feat: message broker)
+		if tx.Type == "ADOPT" && tx.ReferenceID != "" {
+			_ = s.mqClient.Publish(ctx, "payment.expired", map[string]string{"reference_id": tx.ReferenceID})
 		}
 	}
 	return nil

@@ -22,6 +22,7 @@ type Transaction struct {
 	ID        uuid.UUID `gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
 	UserID    uuid.UUID `gorm:"type:uuid;not null"`
 	Amount    int64     `gorm:"not null"`
+	ReferenceID string    `gorm:"index"` // Links to AdoptionIntent ID
 	Type      string    `gorm:"not null"` // DEPOSIT, ADOPT, CARE
 	Payment   Payment   `gorm:"foreignKey:TransactionID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	CreatedAt time.Time
