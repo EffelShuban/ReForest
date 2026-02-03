@@ -2,10 +2,85 @@ syntax = "proto3";
 
 package tree;
 
-option go_package = "reforest/pkg/pb";
-
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
+
+option go_package = "reforest/pkg/pb";
+
+message IdRequest {
+  string id = 1;
+}
+
+message Species {
+  string id = 1;
+  string common_name = 2;
+  float space_required_m2 = 3;
+  int32 price = 4;
+}
+
+message SpeciesList {
+  repeated Species species = 1;
+}
+
+message Plot {
+  string id = 1;
+  string location_name = 2;
+  string address = 3;
+  float available_space_m2 = 4;
+}
+
+message PlotList {
+  repeated Plot plots = 1;
+}
+
+message Tree {
+  string id = 1;
+  string sponsor_id = 2;
+  string species_id = 3;
+  string plot_id = 4;
+  string custom_name = 5;
+  float current_height_meters = 6;
+  int32 total_funded_lifetime = 7;
+  google.protobuf.Timestamp last_care_date = 8;
+  google.protobuf.Timestamp adopted_at = 9;
+}
+
+message TreeList {
+  repeated Tree trees = 1;
+}
+
+message AdoptTreeRequest {
+  string species_id = 1;
+  string plot_id = 2;
+  string custom_name = 3;
+}
+
+message AdoptTreeResponse {
+  string tree_id = 1;
+  string payment_url = 2;
+  string invoice_id = 3;
+}
+
+message LogEntry {
+  string id = 1;
+  string adopted_tree_id = 2;
+  string admin_id = 3;
+  float current_height_meters = 4;
+  string activity = 5;
+  string note = 6;
+  google.protobuf.Timestamp recorded_at = 7;
+}
+
+message CreateLogRequest {
+  string adopted_tree_id = 1;
+  float current_height_meters = 2;
+  string activity = 3;
+  string note = 4;
+}
+
+message LogList {
+  repeated LogEntry logs = 1;
+}
 
 service TreeService {
   // Species
@@ -38,67 +113,3 @@ service TreeService {
   // Scheduled Jobs
   rpc TriggerBiweeklyMaintenance(google.protobuf.Empty) returns (google.protobuf.Empty);
 }
-
-message IdRequest { string id = 1; }
-
-message Species {
-  string id = 1;
-  string common_name = 2;
-  float space_required_m2 = 3;
-  int32 price = 4;
-}
-
-message SpeciesList { repeated Species species = 1; }
-
-message Plot {
-  string id = 1;
-  string location_name = 2;
-  string address = 3;
-  float available_space_m2 = 4;
-}
-
-message PlotList { repeated Plot plots = 1; }
-
-message Tree {
-  string id = 1;
-  string sponsor_id = 2;
-  string species_id = 3;
-  string plot_id = 4;
-  string custom_name = 5;
-  float current_height_meters = 6;
-  int32 total_funded_lifetime = 7;
-  google.protobuf.Timestamp last_care_date = 8;
-  google.protobuf.Timestamp adopted_at = 9;
-}
-
-message TreeList { repeated Tree trees = 1; }
-
-message AdoptTreeRequest {
-  string species_id = 1;
-  string plot_id = 2;
-  string custom_name = 3;
-}
-
-message AdoptTreeResponse {
-  string tree_id = 1;
-  string payment_url = 2; // Provided if balance is low (402 logic)
-}
-
-message LogEntry {
-  string id = 1;
-  string adopted_tree_id = 2;
-  string admin_id = 3;
-  float current_height_meters = 4;
-  string activity = 5;
-  string note = 6;
-  google.protobuf.Timestamp recorded_at = 7;
-}
-
-message CreateLogRequest {
-  string adopted_tree_id = 1;
-  float current_height_meters = 2;
-  string activity = 3;
-  string note = 4;
-}
-
-message LogList { repeated LogEntry logs = 1; }

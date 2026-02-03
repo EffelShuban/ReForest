@@ -2,19 +2,10 @@ syntax = "proto3";
 
 package finance;
 
-option go_package = "reforest/pkg/pb";
-
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 
-service FinanceService {
-  rpc CreateTransaction(TransactionRequest) returns (Transaction);
-  rpc TopUpWallet(TopUpRequest) returns (Transaction);
-  rpc HandleWalletWebhook(WebhookRequest) returns (google.protobuf.Empty);
-  rpc GetBalance(google.protobuf.Empty) returns (BalanceResponse);
-  rpc GetTransactionHistory(google.protobuf.Empty) returns (TransactionList);
-  rpc CheckPaymentExpiry(google.protobuf.Empty) returns (google.protobuf.Empty);
-}
+option go_package = "reforest/pkg/pb";
 
 enum TransactionType {
   DEPOSIT = 0;
@@ -26,6 +17,7 @@ message TransactionRequest {
   string user_id = 1;
   int64 amount = 2;
   TransactionType type = 3;
+  string reference_id = 4;
 }
 
 message TopUpRequest {
@@ -41,15 +33,28 @@ message Transaction {
   string status = 5;
   string payment_url = 6;
   google.protobuf.Timestamp expires_at = 7;
+  string reference_id = 8;
+  string invoice_id = 9;
 }
 
-message TransactionList { repeated Transaction transactions = 1; }
+message TransactionList {
+  repeated Transaction transactions = 1;
+}
 
-message PaymentUrlResponse { string url = 1; }
-
-message BalanceResponse { double balance = 1; }
+message BalanceResponse {
+  double balance = 1;
+}
 
 message WebhookRequest {
   string event = 1;
   bytes data = 2;
+}
+
+service FinanceService {
+  rpc CreateTransaction(TransactionRequest) returns (Transaction);
+  rpc TopUpWallet(TopUpRequest) returns (Transaction);
+  rpc HandleWalletWebhook(WebhookRequest) returns (google.protobuf.Empty);
+  rpc GetBalance(google.protobuf.Empty) returns (BalanceResponse);
+  rpc GetTransactionHistory(google.protobuf.Empty) returns (TransactionList);
+  rpc CheckPaymentExpiry(google.protobuf.Empty) returns (google.protobuf.Empty);
 }

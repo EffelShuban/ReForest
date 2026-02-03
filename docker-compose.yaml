@@ -96,6 +96,13 @@ services:
       - TREE_MANAGEMENT_SERVICE_URL=tree-management-service:50052
       - FINANCE_SERVICE_URL=finance-service:50053
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    container_name: rabbitmq_reforest
+
 volumes:
   postgres_data:
   mongo_data:

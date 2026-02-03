@@ -10,6 +10,7 @@ type Config struct {
 	TreeGRPCPort string
 	FinanceGRPCPort string
 	XenditAPIKey    string
+	RabbitMQURL     string
 }
 
 func Load() *Config {
@@ -48,6 +49,11 @@ func Load() *Config {
 		xenditAPIKey = "xnd_public_development_G3NFqweuzg_Ke9pjaBtZBSIExYCVP0yQA77ZeETSbcI_4yMx5MFc60MROYi0Je"
 	}
 
+	rabbitMQURL := os.Getenv("RABBITMQ_URL")
+	if rabbitMQURL == "" {
+		rabbitMQURL = "amqp://guest:guest@rabbitmq:5672/"
+	}
+
 	return &Config{
 		DBDSN:        dsn,
 		MongoDSN:     mongoDSN,
@@ -56,5 +62,6 @@ func Load() *Config {
 		TreeGRPCPort: treeGrpcPort,
 		FinanceGRPCPort: financeGrpcPort,
 		XenditAPIKey:    xenditAPIKey,
+		RabbitMQURL:     rabbitMQURL,
 	}
 }

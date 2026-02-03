@@ -2,8 +2,12 @@ package service
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"log"
 	"reforest/internal/models"
 	"reforest/internal/repository"
+	"reforest/pkg/mq"
 	"reforest/pkg/pb"
 	"time"
 
@@ -24,7 +28,7 @@ type TreeManagementService interface {
 	UpdatePlot(ctx context.Context, id primitive.ObjectID, req *pb.Plot) (*models.Plot, error)
 	DeletePlot(ctx context.Context, id primitive.ObjectID) error
 
-	AdoptTree(ctx context.Context, req *pb.AdoptTreeRequest, sponsorID string) (*models.Tree, error)
+	AdoptTree(ctx context.Context, req *pb.AdoptTreeRequest, sponsorID string) (*models.AdoptionIntent, string, string, error)
 	GetTree(ctx context.Context, id primitive.ObjectID) (*models.Tree, error)
 	ListTrees(ctx context.Context) ([]*models.Tree, error)
 	UpdateTree(ctx context.Context, id primitive.ObjectID, req *pb.Tree) (*models.Tree, error)
@@ -34,15 +38,17 @@ type TreeManagementService interface {
 	GetLogsByTreeID(ctx context.Context, treeID primitive.ObjectID) ([]*models.LogEntry, error)
 	UpdateLog(ctx context.Context, id primitive.ObjectID, req *pb.LogEntry) (*models.LogEntry, error)
 	DeleteLog(ctx context.Context, id primitive.ObjectID) error
+	StartConsumers()
 }
 
 type treeManagementService struct {
 	repo          repository.TreeManagementRepository
 	financeClient pb.FinanceServiceClient
+	mqClient      *mq.Client
 }
 
-func NewTreeManagementService(repo repository.TreeManagementRepository, financeClient pb.FinanceServiceClient) TreeManagementService {
-	return &treeManagementService{repo: repo, financeClient: financeClient}
+func NewTreeManagementService(repo repository.TreeManagementRepository, financeClient pb.FinanceServiceClient, mqClient *mq.Client) TreeManagementService {
+	return &treeManagementService{repo: repo, financeClient: financeClient, mqClient: mqClient}
 }
 
 func (s *treeManagementService) CreateSpecies(ctx context.Context, req *pb.Species) (*models.Species, error) {
@@ -107,27 +113,47 @@ func (s *treeManagementService) DeletePlot(ctx context.Context, id primitive.Obj
 	return s.repo.DeletePlot(ctx, id)
 }
 
-func (s *treeManagementService) AdoptTree(ctx context.Context, req *pb.AdoptTreeRequest, sponsorID string) (*models.Tree, error) {
+func (s *treeManagementService) AdoptTree(ctx context.Context, req *pb.AdoptTreeRequest, sponsorID string) (*models.AdoptionIntent, string, string, error) {
 	speciesID, err := primitive.ObjectIDFromHex(req.SpeciesId)
 	if err != nil {
-		return nil, models.ErrInvalidInput
+		return nil, "", "", models.ErrInvalidInput
 	}
 	plotID, err := primitive.ObjectIDFromHex(req.PlotId)
 	if err != nil {
-		return nil, models.ErrInvalidInput
+		return nil, "", "", models.ErrInvalidInput
 	}
 
-	tree := &models.Tree{
-		SponsorID:           sponsorID,
-		SpeciesID:           speciesID,
-		PlotID:              plotID,
-		CustomName:          req.CustomName,
-		CurrentHeightMeters: 0,
-		TotalFundedLifetime: 0,
-		LastCareDate:        time.Now(),
-		AdoptedAt:           time.Now(),
+	species, err := s.repo.GetSpecies(ctx, speciesID)
+	if err != nil {
+		return nil, "", "", err
 	}
-	return s.repo.CreateTree(ctx, tree)
+
+	// 1. Create Intent
+	intent := &models.AdoptionIntent{
+		SponsorID:  sponsorID,
+		SpeciesID:  speciesID,
+		PlotID:     plotID,
+		CustomName: req.CustomName,
+		Status:     "PENDING",
+		CreatedAt:  time.Now(),
+	}
+	intent, err = s.repo.CreateAdoptionIntent(ctx, intent)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	// 2. Request Payment (Invoice)
+	tx, err := s.financeClient.CreateTransaction(ctx, &pb.TransactionRequest{
+		UserId:      sponsorID,
+		Amount:      int64(species.Price),
+		Type:        pb.TransactionType_ADOPT,
+		ReferenceId: intent.ID.Hex(),
+	})
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	return intent, tx.PaymentUrl, tx.InvoiceId, nil
 }
 
 func (s *treeManagementService) GetTree(ctx context.Context, id primitive.ObjectID) (*models.Tree, error) {
@@ -250,4 +276,70 @@ func (s *treeManagementService) UpdateLog(ctx context.Context, id primitive.Obje
 
 func (s *treeManagementService) DeleteLog(ctx context.Context, id primitive.ObjectID) error {
 	return s.repo.DeleteLog(ctx, id)
+}
+
+func (s *treeManagementService) StartConsumers() {
+	err := s.mqClient.Consume("payment.success", func(data []byte) error {
+		var event struct {
+			ReferenceID string `json:"reference_id"`
+		}
+		if err := json.Unmarshal(data, &event); err != nil {
+			return err
+		}
+		
+		intentID, err := primitive.ObjectIDFromHex(event.ReferenceID)
+		if err != nil { return err }
+
+		intent, err := s.repo.GetAdoptionIntent(context.Background(), intentID)
+		if err != nil { return err }
+
+		// Create the actual Tree
+		tree := &models.Tree{
+			SponsorID:           intent.SponsorID,
+			SpeciesID:           intent.SpeciesID,
+			PlotID:              intent.PlotID,
+			CustomName:          intent.CustomName,
+			CurrentHeightMeters: 0,
+			TotalFundedLifetime: 0,
+			LastCareDate:        time.Now(),
+			AdoptedAt:           time.Now(),
+		}
+		createdTree, err := s.repo.CreateTree(context.Background(), tree)
+		if err != nil { return err }
+
+		// Create Initial Log
+		_, _ = s.repo.CreateLog(context.Background(), &models.LogEntry{
+			AdoptedTreeID:       createdTree.ID,
+			Activity:            "Tree Planted",
+			Note:                fmt.Sprintf("Tree adopted by %s", intent.SponsorID),
+			RecordedAt:          time.Now(),
+			CurrentHeightMeters: 0.5,
+		})
+		return nil
+	})
+	if err != nil {
+		log.Printf("Failed to start consumers: %v", err)
+	}
+
+	err = s.mqClient.Consume("payment.expired", func(data []byte) error {
+		var event struct {
+			ReferenceID string `json:"reference_id"`
+		}
+		if err := json.Unmarshal(data, &event); err != nil {
+			return err
+		}
+
+		intentID, err := primitive.ObjectIDFromHex(event.ReferenceID)
+		if err != nil {
+			return err
+		}
+
+		// Mark the intent as expired instead of deleting, which is better for auditing.
+		log.Printf("Payment expired for adoption intent %s. Marking as EXPIRED.", intentID.Hex())
+		return s.repo.UpdateAdoptionIntentStatus(context.Background(), intentID, "EXPIRED")
+	})
+
+	if err != nil {
+		log.Printf("Failed to start payment.expired consumer: %v", err)
+	}
 }

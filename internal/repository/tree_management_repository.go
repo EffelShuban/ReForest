@@ -15,6 +15,7 @@ const (
 	plotCollection    = "plots"
 	treeCollection    = "trees"
 	logCollection     = "logs"
+	intentCollection  = "adoption_intents"
 )
 
 type TreeManagementRepository interface {
@@ -41,6 +42,10 @@ type TreeManagementRepository interface {
 	GetLogsByTreeID(ctx context.Context, treeID primitive.ObjectID) ([]*models.LogEntry, error)
 	UpdateLog(ctx context.Context, log *models.LogEntry) (*models.LogEntry, error)
 	DeleteLog(ctx context.Context, id primitive.ObjectID) error
+
+	CreateAdoptionIntent(ctx context.Context, intent *models.AdoptionIntent) (*models.AdoptionIntent, error)
+	GetAdoptionIntent(ctx context.Context, id primitive.ObjectID) (*models.AdoptionIntent, error)
+	UpdateAdoptionIntentStatus(ctx context.Context, id primitive.ObjectID, status string) error
 }
 
 type treeManagementRepository struct {
@@ -119,6 +124,36 @@ func (r *treeManagementRepository) DeleteSpecies(ctx context.Context, id primiti
 		return models.ErrNotFound
 	}
 	return nil
+}
+
+func (r *treeManagementRepository) CreateAdoptionIntent(ctx context.Context, intent *models.AdoptionIntent) (*models.AdoptionIntent, error) {
+	res, err := r.db.Collection(intentCollection).InsertOne(ctx, intent)
+	if err != nil {
+		return nil, err
+	}
+	intent.ID = res.InsertedID.(primitive.ObjectID)
+	return intent, nil
+}
+
+func (r *treeManagementRepository) GetAdoptionIntent(ctx context.Context, id primitive.ObjectID) (*models.AdoptionIntent, error) {
+	var intent models.AdoptionIntent
+	err := r.db.Collection(intentCollection).FindOne(ctx, bson.M{"_id": id}).Decode(&intent)
+	if err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return nil, models.ErrNotFound
+		}
+		return nil, err
+	}
+	return &intent, nil
+}
+
+func (r *treeManagementRepository) UpdateAdoptionIntentStatus(ctx context.Context, id primitive.ObjectID, status string) error {
+	_, err := r.db.Collection(intentCollection).UpdateOne(
+		ctx,
+		bson.M{"_id": id},
+		bson.M{"$set": bson.M{"status": status}},
+	)
+	return err
 }
 
 func (r *treeManagementRepository) CreatePlot(ctx context.Context, plot *models.Plot) (*models.Plot, error) {

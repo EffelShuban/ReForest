@@ -322,20 +322,21 @@ func (h *TreeManagementHandler) AdoptTree(ctx context.Context, req *pb.AdoptTree
 	if err != nil {
 		return nil, err
 	}
-	tree, err := h.treeService.AdoptTree(ctx, req, sponsorID)
+	intent, paymentURL, invoiceID, err := h.treeService.AdoptTree(ctx, req, sponsorID)
 	if err != nil {
 		if errors.Is(err, models.ErrInvalidInput) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		return nil, status.Error(codes.Internal, "failed to adopt tree")
+		if errors.Is(err, models.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, "failed to adopt tree: %v", err)
 	}
 
 	return &pb.AdoptTreeResponse{
-		TreeId: tree.ID.Hex(),
-		/*PaymentUrl is part of the response but the logic for it might be handled
-		in a separate payment service or based on the sponsor's balance.
-		Leaving it empty for now.*/
-		PaymentUrl: "",
+		TreeId:     intent.ID.Hex(), // Returning Intent ID as temporary Tree ID
+		PaymentUrl: paymentURL,
+		InvoiceId:  invoiceID,
 	}, nil
 }
 
