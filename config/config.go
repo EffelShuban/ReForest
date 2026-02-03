@@ -16,6 +16,7 @@ type Config struct {
 	MailtrapUser    string
 	MailtrapPass    string
 	MailtrapFrom    string
+	RabbitMQURL     string
 }
 
 func Load() *Config {
@@ -77,6 +78,9 @@ func Load() *Config {
 	mailtrapFrom := os.Getenv("MAILTRAP_FROM")
 	if mailtrapFrom == "" {
 		mailtrapFrom = "no-reply@example.com"
+	rabbitMQURL := os.Getenv("RABBITMQ_URL")
+	if rabbitMQURL == "" {
+		rabbitMQURL = "amqp://guest:guest@rabbitmq:5672/"
 	}
 
 	rabbitMQURL := os.Getenv("RABBITMQ_URL")
@@ -98,5 +102,6 @@ func Load() *Config {
 		MailtrapUser:    mailtrapUser,
 		MailtrapPass:    mailtrapPass,
 		MailtrapFrom:    mailtrapFrom,
+		RabbitMQURL:     rabbitMQURL,
 	}
 }
