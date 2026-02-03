@@ -346,7 +346,7 @@ func (x *TransactionList) GetTransactions() []*Transaction {
 
 type BalanceResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Balance       float64                `protobuf:"fixed64,1,opt,name=balance,proto3" json:"balance,omitempty"`
+	Balance       int64                  `protobuf:"varint,1,opt,name=balance,proto3" json:"balance,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -381,7 +381,7 @@ func (*BalanceResponse) Descriptor() ([]byte, []int) {
 	return file_proto_finance_service_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *BalanceResponse) GetBalance() float64 {
+func (x *BalanceResponse) GetBalance() int64 {
 	if x != nil {
 		return x.Balance
 	}
@@ -469,7 +469,7 @@ const file_proto_finance_service_proto_rawDesc = "" +
 	"\x0fTransactionList\x128\n" +
 	"\ftransactions\x18\x01 \x03(\v2\x14.finance.TransactionR\ftransactions\"+\n" +
 	"\x0fBalanceResponse\x12\x18\n" +
-	"\abalance\x18\x01 \x01(\x01R\abalance\":\n" +
+	"\abalance\x18\x01 \x01(\x03R\abalance\":\n" +
 	"\x0eWebhookRequest\x12\x14\n" +
 	"\x05event\x18\x01 \x01(\tR\x05event\x12\x12\n" +
 	"\x04data\x18\x02 \x01(\fR\x04data*3\n" +

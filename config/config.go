@@ -1,10 +1,8 @@
 package config
 
 import (
-	"log"
 	"os"
 
-	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -82,6 +80,7 @@ func Load() *Config {
 	mailtrapFrom := os.Getenv("MAILTRAP_FROM")
 	if mailtrapFrom == "" {
 		mailtrapFrom = "no-reply@example.com"
+	}
 	rabbitMQURL := os.Getenv("RABBITMQ_URL")
 	if rabbitMQURL == "" {
 		rabbitMQURL = "amqp://guest:guest@rabbitmq:5672/"

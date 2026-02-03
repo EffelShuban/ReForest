@@ -42,16 +42,6 @@ type AdoptionIntent struct {
 	CreatedAt  time.Time          `bson:"created_at"`
 }
 
-type AdoptionIntent struct {
-	ID         primitive.ObjectID `bson:"_id,omitempty"`
-	SponsorID  string             `bson:"sponsor_id"`
-	SpeciesID  primitive.ObjectID `bson:"species_id"`
-	PlotID     primitive.ObjectID `bson:"plot_id"`
-	CustomName string             `bson:"custom_name"`
-	Status     string             `bson:"status"` // PENDING, COMPLETED, EXPIRED
-	CreatedAt  time.Time          `bson:"created_at"`
-}
-
 type LogEntry struct {
 	ID                  primitive.ObjectID `bson:"_id,omitempty"`
 	AdoptedTreeID       primitive.ObjectID `bson:"adopted_tree_id"`

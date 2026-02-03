@@ -118,7 +118,6 @@ func (s *treeManagementService) AdoptTree(ctx context.Context, req *pb.AdoptTree
 	speciesID, err := primitive.ObjectIDFromHex(req.SpeciesId)
 	if err != nil {
 		return nil, "", "", models.ErrInvalidInput
-<<<<<<< HEAD
 	}
 
 	plotID, err := primitive.ObjectIDFromHex(req.PlotId)
@@ -131,20 +130,6 @@ func (s *treeManagementService) AdoptTree(ctx context.Context, req *pb.AdoptTree
 		return nil, "", "", err
 	}
 
-=======
-	}
-	plotID, err := primitive.ObjectIDFromHex(req.PlotId)
-	if err != nil {
-		return nil, "", "", models.ErrInvalidInput
-	}
-
-	species, err := s.repo.GetSpecies(ctx, speciesID)
-	if err != nil {
-		return nil, "", "", err
-	}
-
-	// 1. Create Intent
->>>>>>> 42f8974 (feat: message broker)
 	intent := &models.AdoptionIntent{
 		SponsorID:  sponsorID,
 		SpeciesID:  speciesID,
@@ -158,10 +143,6 @@ func (s *treeManagementService) AdoptTree(ctx context.Context, req *pb.AdoptTree
 		return nil, "", "", err
 	}
 
-<<<<<<< HEAD
-=======
-	// 2. Request Payment (Invoice)
->>>>>>> 42f8974 (feat: message broker)
 	tx, err := s.financeClient.CreateTransaction(ctx, &pb.TransactionRequest{
 		UserId:      sponsorID,
 		Amount:      int64(species.Price),
@@ -312,32 +293,18 @@ func (s *treeManagementService) StartConsumers() {
 		intent, err := s.repo.GetAdoptionIntent(context.Background(), intentID)
 		if err != nil { return err }
 
-<<<<<<< HEAD
 		tree := &models.Tree{
 			ID:                  intent.ID,
-=======
-		// Create the actual Tree
-		tree := &models.Tree{
->>>>>>> 42f8974 (feat: message broker)
 			SponsorID:           intent.SponsorID,
 			SpeciesID:           intent.SpeciesID,
 			PlotID:              intent.PlotID,
 			CustomName:          intent.CustomName,
-<<<<<<< HEAD
-=======
-			CurrentHeightMeters: 0,
-			TotalFundedLifetime: 0,
->>>>>>> 42f8974 (feat: message broker)
 			LastCareDate:        time.Now(),
 			AdoptedAt:           time.Now(),
 		}
 		createdTree, err := s.repo.CreateTree(context.Background(), tree)
 		if err != nil { return err }
 
-<<<<<<< HEAD
-=======
-		// Create Initial Log
->>>>>>> 42f8974 (feat: message broker)
 		_, _ = s.repo.CreateLog(context.Background(), &models.LogEntry{
 			AdoptedTreeID:       createdTree.ID,
 			Activity:            "Tree Planted",
@@ -345,14 +312,11 @@ func (s *treeManagementService) StartConsumers() {
 			RecordedAt:          time.Now(),
 			CurrentHeightMeters: 0.5,
 		})
-<<<<<<< HEAD
 
 		if err := s.repo.UpdateAdoptionIntentStatus(context.Background(), intent.ID, "COMPLETED"); err != nil {
 			log.Printf("WARN: failed to update adoption intent %s status to COMPLETED: %v", intent.ID.Hex(), err)
 		}
 
-=======
->>>>>>> 42f8974 (feat: message broker)
 		return nil
 	})
 	if err != nil {
@@ -372,10 +336,6 @@ func (s *treeManagementService) StartConsumers() {
 			return err
 		}
 
-<<<<<<< HEAD
-=======
-		// Mark the intent as expired instead of deleting, which is better for auditing.
->>>>>>> 42f8974 (feat: message broker)
 		log.Printf("Payment expired for adoption intent %s. Marking as EXPIRED.", intentID.Hex())
 		return s.repo.UpdateAdoptionIntentStatus(context.Background(), intentID, "EXPIRED")
 	})
