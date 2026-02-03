@@ -192,7 +192,7 @@ func TestFinanceService_HandleWalletWebhook_Paid(t *testing.T) {
 		Payment: models.Payment{
 			Status: "PENDING",
 		},
-		UserID: txID, // just reuse
+		UserID: txID,
 		Amount: 900,
 	}
 

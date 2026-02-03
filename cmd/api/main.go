@@ -45,8 +45,8 @@ func handleGrpcError(c *gin.Context, err error) {
 
 func respondProto(c *gin.Context, code int, msg proto.Message) {
 	m := protojson.MarshalOptions{
-		UseProtoNames:   true, // Preserves snake_case from proto definitions
-		EmitUnpopulated: true, // Optional: Include fields with default values (like 0 or "")
+		UseProtoNames:   true,
+		EmitUnpopulated: true,
 	}
 	b, err := m.Marshal(msg)
 	if err != nil {
@@ -296,7 +296,7 @@ func main() {
 		}
 
 		_, err = financeClient.HandleWalletWebhook(c.Request.Context(), &pb.WebhookRequest{
-			Event: "INVOICE_CALLBACK", // You can also extract this from headers if Xendit sends it
+			Event: "INVOICE_CALLBACK",
 			Data:  data,
 		})
 		if err != nil {

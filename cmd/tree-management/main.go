@@ -24,7 +24,6 @@ import (
 func metadataForwardingInterceptor(ctx context.Context, method string, req, reply interface{}, cc *googleGrpc.ClientConn, invoker googleGrpc.UnaryInvoker, opts ...googleGrpc.CallOption) error {
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
-		// Forward all metadata, including the "authorization" header
 		ctx = metadata.NewOutgoingContext(ctx, md)
 	}
 	return invoker(ctx, method, req, reply, cc, opts...)

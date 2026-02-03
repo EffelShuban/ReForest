@@ -334,7 +334,7 @@ func (h *TreeManagementHandler) AdoptTree(ctx context.Context, req *pb.AdoptTree
 	}
 
 	return &pb.AdoptTreeResponse{
-		TreeId:     intent.ID.Hex(), // Returning Intent ID as temporary Tree ID
+		TreeId:     intent.ID.Hex(),
 		PaymentUrl: paymentURL,
 		InvoiceId:  invoiceID,
 	}, nil
