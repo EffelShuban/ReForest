@@ -248,7 +248,7 @@ func TestFinanceService_TopUpWallet_InvalidExpiryFallsBack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("TopUpWallet error: %v", err)
 	}
-	// fallback expiry should be after now
+	
 	if !tx.Payment.ExpiresAt.After(now) {
 		t.Fatalf("expected fallback expiry time to be set")
 	}

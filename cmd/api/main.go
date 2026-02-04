@@ -88,7 +88,6 @@ func main() {
 
 	r := gin.Default()
 
-	// CORS Middleware
 	r.Use(func(c *gin.Context) {
 		allowedOrigin := os.Getenv("ALLOWED_ORIGIN")
 		if allowedOrigin == "" {
@@ -106,7 +105,6 @@ func main() {
 		c.Next()
 	})
 
-	// Serve OpenAPI Specification
 	openApiFile := "../openapi.json"
 	if _, err := os.Stat("/app/openapi.json"); err == nil {
 		openApiFile = "/app/openapi.json"

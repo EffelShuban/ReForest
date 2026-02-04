@@ -87,7 +87,6 @@ func (s *financeService) CreateTransaction(ctx context.Context, req *pb.Transact
 				return nil, fmt.Errorf("failed to update wallet balance for adoption: %w", err)
 			}
 
-			// Publish success event immediately
 			_ = s.mqClient.Publish(ctx, "payment.success", map[string]string{"reference_id": tx.ReferenceID})
 
 			return tx, nil
