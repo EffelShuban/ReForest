@@ -19,6 +19,18 @@ type mockAuthRepo struct {
 	getErr      error
 }
 
+type mockEmailSender struct {
+	to      string
+	subject string
+	body    string
+	err     error
+}
+
+func (m *mockEmailSender) Send(to, subject, body string) error {
+	m.to, m.subject, m.body = to, subject, body
+	return m.err
+}
+
 func (m *mockAuthRepo) CreateUser(ctx context.Context, user *models.User) (*models.User, error) {
 	m.createdUser = user
 	return user, m.createErr
@@ -31,7 +43,8 @@ func (m *mockAuthRepo) GetByEmail(ctx context.Context, email string) (*models.Us
 func TestAuthService_Register_Success(t *testing.T) {
 	repo := &mockAuthRepo{}
 	jwtProvider := utils.NewJWTProvider("secret")
-	svc := NewAuthService(repo, jwtProvider)
+	emailSender := &mockEmailSender{}
+	svc := NewAuthService(repo, jwtProvider, emailSender)
 
 	req := &pb.RegisterRequest{
 		Email:       "user@example.com",
@@ -61,12 +74,16 @@ func TestAuthService_Register_Success(t *testing.T) {
 	if user.Profile.ID != user.ID {
 		t.Fatalf("Profile ID should match User ID")
 	}
+
+	if emailSender.to != req.Email {
+		t.Fatalf("expected welcome email sent to %s, got %s", req.Email, emailSender.to)
+	}
 }
 
 func TestAuthService_Login_Success(t *testing.T) {
 	repo := &mockAuthRepo{}
 	jwtProvider := utils.NewJWTProvider("secret")
-	svc := NewAuthService(repo, jwtProvider)
+	svc := NewAuthService(repo, jwtProvider, nil)
 
 	pw := "secret123"
 	hashed, _ := bcrypt.GenerateFromPassword([]byte(pw), bcrypt.DefaultCost)
@@ -98,7 +115,7 @@ func TestAuthService_Login_Success(t *testing.T) {
 func TestAuthService_Login_InvalidPassword(t *testing.T) {
 	repo := &mockAuthRepo{}
 	jwtProvider := utils.NewJWTProvider("secret")
-	svc := NewAuthService(repo, jwtProvider)
+	svc := NewAuthService(repo, jwtProvider, nil)
 
 	hashed, _ := bcrypt.GenerateFromPassword([]byte("correct"), bcrypt.DefaultCost)
 	repo.getUser = &models.User{
@@ -120,7 +137,7 @@ func TestAuthService_Login_InvalidPassword(t *testing.T) {
 func TestAuthService_Login_UserNotFound(t *testing.T) {
 	repo := &mockAuthRepo{getErr: models.ErrInvalidCredentials}
 	jwtProvider := utils.NewJWTProvider("secret")
-	svc := NewAuthService(repo, jwtProvider)
+	svc := NewAuthService(repo, jwtProvider, nil)
 
 	_, _, err := svc.Login(context.Background(), &pb.LoginRequest{
 		Email:    "user@example.com",
