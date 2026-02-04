@@ -5,10 +5,10 @@ import (
 	"net"
 
 	"reforest/config"
-	"reforest/pkg/database"
 	"reforest/internal/delivery/grpc"
 	"reforest/internal/repository"
 	"reforest/internal/service"
+	"reforest/pkg/database"
 	"reforest/pkg/pb"
 	"reforest/pkg/utils"
 
@@ -23,7 +23,8 @@ func main() {
 	jwtProvider := utils.NewJWTProvider(cfg.JWTSecret)
 
 	authRepo := repository.NewAuthRepository(db)
-	authSvc := service.NewAuthService(authRepo, jwtProvider)
+	emailSender := service.NewMailtrapSender(cfg)
+	authSvc := service.NewAuthService(authRepo, jwtProvider, emailSender)
 	authHandler := grpc.NewAuthHandler(authSvc)
 
 	lis, err := net.Listen("tcp", cfg.AuthGRPCPort)

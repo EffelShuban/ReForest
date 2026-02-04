@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"reforest/internal/models"
 	"reforest/internal/repository"
 	"reforest/pkg/pb"
@@ -12,20 +14,22 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthService interface{
+type AuthService interface {
 	Register(ctx context.Context, req *pb.RegisterRequest) (*models.User, error)
 	Login(ctx context.Context, req *pb.LoginRequest) (string, *models.User, error)
 }
 
-type authService struct{
-	repo repository.AuthRepository
+type authService struct {
+	repo        repository.AuthRepository
 	jwtProvider *utils.JWTProvider
+	emailSender EmailSender
 }
 
-func NewAuthService(repo repository.AuthRepository, jwt *utils.JWTProvider) AuthService {
+func NewAuthService(repo repository.AuthRepository, jwt *utils.JWTProvider, emailSender EmailSender) AuthService {
 	return &authService{
 		repo:        repo,
 		jwtProvider: jwt,
+		emailSender: emailSender,
 	}
 }
 
@@ -56,7 +60,20 @@ func (s *authService) Register(ctx context.Context, req *pb.RegisterRequest) (*m
 		},
 	}
 
-	return s.repo.CreateUser(ctx, user)
+	createdUser, err := s.repo.CreateUser(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+
+	if s.emailSender != nil {
+		subject := "Welcome to ReForest"
+		body := fmt.Sprintf("Halo %s,\n\nTerima kasih telah mendaftar di ReForest. Selamat datang!", createdUser.Profile.FullName)
+		if err := s.emailSender.Send(createdUser.Email, subject, body); err != nil {
+			log.Printf("WARN: gagal mengirim email welcome ke %s: %v", createdUser.Email, err)
+		}
+	}
+
+	return createdUser, nil
 }
 
 func (s *authService) Login(ctx context.Context, req *pb.LoginRequest) (string, *models.User, error) {

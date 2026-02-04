@@ -129,7 +129,7 @@ func main() {
 		switch strings.ToUpper(body.Role) {
 		case "ADMIN", "SPONSOR":
 			// valid
-		default: 
+		default:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid role, must be ADMIN or SPONSOR"})
 			return
 		}
