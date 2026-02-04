@@ -162,9 +162,6 @@ func TestTreeService_GetTree_ComputesAggregates(t *testing.T) {
 	if tree.CurrentHeightMeters != 2.2 {
 		t.Fatalf("expected max height 2.2, got %v", tree.CurrentHeightMeters)
 	}
-	if tree.TotalFundedLifetime != 300 {
-		t.Fatalf("expected total funded 300, got %d", tree.TotalFundedLifetime)
-	}
 }
 
 func TestTreeService_ListTrees_UsesLogsHeight(t *testing.T) {

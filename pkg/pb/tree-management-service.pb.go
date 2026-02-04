@@ -299,7 +299,6 @@ type Tree struct {
 	PlotId              string                 `protobuf:"bytes,4,opt,name=plot_id,json=plotId,proto3" json:"plot_id,omitempty"`
 	CustomName          string                 `protobuf:"bytes,5,opt,name=custom_name,json=customName,proto3" json:"custom_name,omitempty"`
 	CurrentHeightMeters float32                `protobuf:"fixed32,6,opt,name=current_height_meters,json=currentHeightMeters,proto3" json:"current_height_meters,omitempty"`
-	TotalFundedLifetime int32                  `protobuf:"varint,7,opt,name=total_funded_lifetime,json=totalFundedLifetime,proto3" json:"total_funded_lifetime,omitempty"`
 	LastCareDate        *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=last_care_date,json=lastCareDate,proto3" json:"last_care_date,omitempty"`
 	AdoptedAt           *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=adopted_at,json=adoptedAt,proto3" json:"adopted_at,omitempty"`
 	unknownFields       protoimpl.UnknownFields
@@ -374,13 +373,6 @@ func (x *Tree) GetCustomName() string {
 func (x *Tree) GetCurrentHeightMeters() float32 {
 	if x != nil {
 		return x.CurrentHeightMeters
-	}
-	return 0
-}
-
-func (x *Tree) GetTotalFundedLifetime() int32 {
-	if x != nil {
-		return x.TotalFundedLifetime
 	}
 	return 0
 }
@@ -789,7 +781,7 @@ const file_proto_tree_management_service_proto_rawDesc = "" +
 	"\x12available_space_m2\x18\x04 \x01(\x02R\x10availableSpaceM2\",\n" +
 	"\bPlotList\x12 \n" +
 	"\x05plots\x18\x01 \x03(\v2\n" +
-	".tree.PlotR\x05plots\"\xf3\x02\n" +
+	".tree.PlotR\x05plots\"\xbf\x02\n" +
 	"\x04Tree\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -799,8 +791,7 @@ const file_proto_tree_management_service_proto_rawDesc = "" +
 	"\aplot_id\x18\x04 \x01(\tR\x06plotId\x12\x1f\n" +
 	"\vcustom_name\x18\x05 \x01(\tR\n" +
 	"customName\x122\n" +
-	"\x15current_height_meters\x18\x06 \x01(\x02R\x13currentHeightMeters\x122\n" +
-	"\x15total_funded_lifetime\x18\a \x01(\x05R\x13totalFundedLifetime\x12@\n" +
+	"\x15current_height_meters\x18\x06 \x01(\x02R\x13currentHeightMeters\x12@\n" +
 	"\x0elast_care_date\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\flastCareDate\x129\n" +
 	"\n" +
 	"adopted_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tadoptedAt\",\n" +

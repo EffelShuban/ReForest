@@ -40,7 +40,6 @@ message Tree {
   string plot_id = 4;
   string custom_name = 5;
   float current_height_meters = 6;
-  int32 total_funded_lifetime = 7;
   google.protobuf.Timestamp last_care_date = 8;
   google.protobuf.Timestamp adopted_at = 9;
 }

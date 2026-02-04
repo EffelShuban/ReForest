@@ -29,6 +29,15 @@ services:
     volumes:
       - mongo_data:/data/db
     container_name: mongo_db_reforest
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'mongosh -u root -p password --authenticationDatabase admin --eval ''db.adminCommand("ping")''',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   auth-service:
     build:
@@ -43,6 +52,8 @@ services:
     depends_on:
       postgres-db:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   tree-management-service:
     build:
@@ -55,7 +66,10 @@ services:
     env_file:
       - .env.docker
     depends_on:
-      - mongo-db
+      mongo-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   finance-service:
     build:
@@ -69,6 +83,8 @@ services:
       - .env.docker
     depends_on:
       postgres-db:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
 
   api-gateway:
@@ -86,6 +102,8 @@ services:
       - finance-service
     env_file:
       - .env.docker
+    volumes:
+      - ./openapi.json:/app/openapi.json
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -93,6 +111,20 @@ services:
       - "5672:5672"
       - "15672:15672"
     container_name: rabbitmq_reforest
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui
+    ports:
+      - "8081:8080"
+    environment:
+      URL: http://localhost:8080/openapi.json
+    depends_on:
+      - api-gateway
 
 volumes:
   postgres_data:
