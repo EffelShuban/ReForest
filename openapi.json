@@ -110,7 +110,6 @@
           "plot_id": { "type": "string" },
           "custom_name": { "type": "string" },
           "current_height_meters": { "type": "number", "format": "float" },
-          "total_funded_lifetime": { "type": "integer" },
           "last_care_date": { "type": "string", "format": "date-time" },
           "adopted_at": { "type": "string", "format": "date-time" }
         }
@@ -284,6 +283,22 @@
             "content": {
               "application/json": {
                 "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "summary": "Get OpenAPI Specification",
+        "tags": ["Public"],
+        "responses": {
+          "200": {
+            "description": "The OpenAPI specification JSON.",
+            "content": {
+              "application/json": {
+                "schema": { "type": "object" }
               }
             }
           }
@@ -536,7 +551,11 @@
           "content": {
             "application/json": {
               "schema": {
-                "type": "object"
+                "type": "object",
+                "properties": {
+                  "external_id": { "type": "string" },
+                  "status": { "type": "string" }
+                }
               }
             }
           }

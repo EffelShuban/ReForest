@@ -12,8 +12,6 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type TreeManagementService interface {
@@ -130,6 +128,20 @@ func (s *treeManagementService) AdoptTree(ctx context.Context, req *pb.AdoptTree
 		return nil, "", "", err
 	}
 
+	plot, err := s.repo.GetPlot(ctx, plotID)
+	if err != nil {
+		return nil, "", "", err
+	}
+
+	if plot.AvailableSpaceM2 < species.SpaceRequiredM2 {
+		return nil, "", "", fmt.Errorf("insufficient space in plot")
+	}
+
+	plot.AvailableSpaceM2 -= species.SpaceRequiredM2
+	if _, err := s.repo.UpdatePlot(ctx, plot); err != nil {
+		return nil, "", "", err
+	}
+
 	intent := &models.AdoptionIntent{
 		SponsorID:  sponsorID,
 		SpeciesID:  speciesID,
@@ -140,6 +152,8 @@ func (s *treeManagementService) AdoptTree(ctx context.Context, req *pb.AdoptTree
 	}
 	intent, err = s.repo.CreateAdoptionIntent(ctx, intent)
 	if err != nil {
+		plot.AvailableSpaceM2 += species.SpaceRequiredM2
+		s.repo.UpdatePlot(ctx, plot)
 		return nil, "", "", err
 	}
 
@@ -150,6 +164,9 @@ func (s *treeManagementService) AdoptTree(ctx context.Context, req *pb.AdoptTree
 		ReferenceId: intent.ID.Hex(),
 	})
 	if err != nil {
+		plot.AvailableSpaceM2 += species.SpaceRequiredM2
+		s.repo.UpdatePlot(ctx, plot)
+		s.repo.UpdateAdoptionIntentStatus(ctx, intent.ID, "FAILED")
 		return nil, "", "", err
 	}
 
@@ -171,22 +188,6 @@ func (s *treeManagementService) GetTree(ctx context.Context, id primitive.Object
 			}
 		}
 		tree.CurrentHeightMeters = maxHeight
-	}
-
-	/*Create a new context for the gRPC call, with metadata containing the tree's sponsor ID.
-	This ensures we get the transaction history for the correct user, as GetTree is a public endpoint.*/
-	md := metadata.New(map[string]string{"x-user-id": tree.SponsorID})
-	clientCtx := metadata.NewOutgoingContext(ctx, md)
-	txList, err := s.financeClient.GetTransactionHistory(clientCtx, &emptypb.Empty{})
-	if err == nil && txList != nil {
-		var totalFunded int32
-		treeIDHex := tree.ID.Hex()
-		for _, tx := range txList.Transactions {
-			if tx.ReferenceId == treeIDHex {
-				totalFunded += int32(tx.Amount)
-			}
-		}
-		tree.TotalFundedLifetime = totalFunded
 	}
 
 	return tree, nil
@@ -334,6 +335,27 @@ func (s *treeManagementService) StartConsumers() {
 		intentID, err := primitive.ObjectIDFromHex(event.ReferenceID)
 		if err != nil {
 			return err
+		}
+
+		intent, err := s.repo.GetAdoptionIntent(context.Background(), intentID)
+		if err != nil {
+			return err
+		}
+
+		if intent.Status == "PENDING" {
+			if _, err := s.repo.GetTree(context.Background(), intent.ID); err == nil {
+				log.Printf("WARN: Payment expired event for intent %s but tree exists. Ignoring.", intentID.Hex())
+				return nil
+			}
+
+			species, err := s.repo.GetSpecies(context.Background(), intent.SpeciesID)
+			if err != nil { return err }
+
+			plot, err := s.repo.GetPlot(context.Background(), intent.PlotID)
+			if err != nil { return err }
+
+			plot.AvailableSpaceM2 += species.SpaceRequiredM2
+			if _, err := s.repo.UpdatePlot(context.Background(), plot); err != nil { return err }
 		}
 
 		log.Printf("Payment expired for adoption intent %s. Marking as EXPIRED.", intentID.Hex())

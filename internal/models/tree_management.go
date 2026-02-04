@@ -27,7 +27,6 @@ type Tree struct {
 	PlotID              primitive.ObjectID `bson:"plot_id"`
 	CustomName          string             `bson:"custom_name"`
 	CurrentHeightMeters float64            `bson:"-"`
-	TotalFundedLifetime int32              `bson:"-"`
 	LastCareDate        time.Time          `bson:"last_care_date"`
 	AdoptedAt           time.Time          `bson:"adopted_at"`
 }
