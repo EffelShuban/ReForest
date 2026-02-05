@@ -38,7 +38,8 @@ func main() {
 	defer mqClient.Close()
 
 	financeRepo := repository.NewFinanceRepository(db)
-	financeSvc := service.NewFinanceService(financeRepo, cfg.XenditAPIKey, mqClient)
+	emailSender := service.NewMailtrapSender(cfg)
+	financeSvc := service.NewFinanceService(financeRepo, cfg.XenditAPIKey, mqClient, emailSender)
 	financeHandler := grpc.NewFinanceHandler(financeSvc)
 
 	go func() {
@@ -59,15 +60,15 @@ func main() {
 
 	publicMethods := map[string]bool{
 		"/finance.FinanceService/HandleWalletWebhook": true,
-		"/finance.FinanceService/CheckPaymentExpiry":    true,
+		"/finance.FinanceService/CheckPaymentExpiry":  true,
 	}
 
 	adminMethods := map[string]bool{}
 
 	sponsorMethods := map[string]bool{
-		"/finance.FinanceService/CreateTransaction": true,
-		"/finance.FinanceService/TopUpWallet":       true,
-		"/finance.FinanceService/GetBalance":        true,
+		"/finance.FinanceService/CreateTransaction":     true,
+		"/finance.FinanceService/TopUpWallet":           true,
+		"/finance.FinanceService/GetBalance":            true,
 		"/finance.FinanceService/GetTransactionHistory": true,
 	}
 

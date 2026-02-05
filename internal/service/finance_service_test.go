@@ -21,6 +21,9 @@ type mockFinanceRepo struct {
 	balanceDelta       int64
 	getBalanceValue    int64
 	getBalanceErr      error
+	getEmail           string
+	getEmailBalanceVal int64
+	getEmailBalanceErr error
 	createTx           *models.Transaction
 	createTxErr        error
 	txByID             *models.Transaction
@@ -46,6 +49,10 @@ func (m *mockFinanceRepo) UpdateWalletBalance(ctx context.Context, userID uuid.U
 	m.balanceUserID = userID
 	m.balanceDelta = amount
 	return m.getBalanceErr
+}
+
+func (m *mockFinanceRepo) GetUserEmailAndBalance(ctx context.Context, userID uuid.UUID) (string, int64, error) {
+	return m.getEmail, m.getEmailBalanceVal, m.getEmailBalanceErr
 }
 
 func (m *mockFinanceRepo) CreateTransaction(ctx context.Context, tx *models.Transaction) error {
@@ -80,7 +87,7 @@ func (m *mockFinanceRepo) GetPendingTransactionsBefore(ctx context.Context, expi
 
 func TestFinanceService_CreateTransaction_AdoptCreatesInvoiceWhenBalanceInsufficient(t *testing.T) {
 	repo := &mockFinanceRepo{getBalanceValue: 500}
-	svc := NewFinanceService(repo, "key", nil)
+	svc := NewFinanceService(repo, "key", nil, nil)
 
 	expiry := time.Now().Add(time.Hour).UTC().Truncate(time.Second)
 	body := fmt.Sprintf(`{"invoice_url":"https://pay.xendit.co/abc","status":"PENDING","expiry_date":"%s"}`, expiry.Format(time.RFC3339))
@@ -129,7 +136,7 @@ func TestFinanceService_CreateTransaction_AdoptCreatesInvoiceWhenBalanceInsuffic
 
 func TestFinanceService_CreateTransaction_InvalidUser(t *testing.T) {
 	repo := &mockFinanceRepo{}
-	svc := NewFinanceService(repo, "key", nil)
+	svc := NewFinanceService(repo, "key", nil, nil)
 
 	_, err := svc.CreateTransaction(context.Background(), &pb.TransactionRequest{
 		UserId: "invalid-uuid",
@@ -143,7 +150,7 @@ func TestFinanceService_CreateTransaction_InvalidUser(t *testing.T) {
 
 func TestFinanceService_CreateTransaction_GetBalanceError(t *testing.T) {
 	repo := &mockFinanceRepo{getBalanceErr: errors.New("db down")}
-	svc := NewFinanceService(repo, "key", nil)
+	svc := NewFinanceService(repo, "key", nil, nil)
 
 	_, err := svc.CreateTransaction(context.Background(), &pb.TransactionRequest{
 		UserId: uuid.New().String(),
@@ -157,7 +164,7 @@ func TestFinanceService_CreateTransaction_GetBalanceError(t *testing.T) {
 
 func TestFinanceService_CreateTransaction_UnhandledType(t *testing.T) {
 	repo := &mockFinanceRepo{}
-	svc := NewFinanceService(repo, "key", nil)
+	svc := NewFinanceService(repo, "key", nil, nil)
 
 	_, err := svc.CreateTransaction(context.Background(), &pb.TransactionRequest{
 		UserId: uuid.New().String(),
@@ -177,7 +184,7 @@ func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
 
 func TestFinanceService_TopUpWallet_Success(t *testing.T) {
 	repo := &mockFinanceRepo{}
-	svc := NewFinanceService(repo, "xnd_key", nil)
+	svc := NewFinanceService(repo, "xnd_key", nil, nil)
 
 	expiry := time.Now().Add(time.Hour).UTC().Truncate(time.Second)
 	body := `{"invoice_url":"https://pay.xendit.co/abc","status":"PENDING","expiry_date":"` + expiry.Format(time.RFC3339) + `"}`
@@ -218,7 +225,7 @@ func TestFinanceService_TopUpWallet_Success(t *testing.T) {
 
 func TestFinanceService_TopUpWallet_XenditErrorStatus(t *testing.T) {
 	repo := &mockFinanceRepo{}
-	svc := NewFinanceService(repo, "x", nil)
+	svc := NewFinanceService(repo, "x", nil, nil)
 
 	origTransport := http.DefaultTransport
 	http.DefaultTransport = roundTripperFunc(func(r *http.Request) (*http.Response, error) {
@@ -234,7 +241,7 @@ func TestFinanceService_TopUpWallet_XenditErrorStatus(t *testing.T) {
 
 func TestFinanceService_TopUpWallet_InvalidExpiryFallsBack(t *testing.T) {
 	repo := &mockFinanceRepo{}
-	svc := NewFinanceService(repo, "x", nil)
+	svc := NewFinanceService(repo, "x", nil, nil)
 
 	body := `{"invoice_url":"https://pay.xendit.co/abc","status":"PENDING","expiry_date":"not-a-date"}`
 	now := time.Now()
@@ -248,7 +255,7 @@ func TestFinanceService_TopUpWallet_InvalidExpiryFallsBack(t *testing.T) {
 	if err != nil {
 		t.Fatalf("TopUpWallet error: %v", err)
 	}
-	
+	// fallback expiry should be after now
 	if !tx.Payment.ExpiresAt.After(now) {
 		t.Fatalf("expected fallback expiry time to be set")
 	}
@@ -256,7 +263,7 @@ func TestFinanceService_TopUpWallet_InvalidExpiryFallsBack(t *testing.T) {
 
 func TestFinanceService_TopUpWallet_UpdateInvoiceError(t *testing.T) {
 	repo := &mockFinanceRepo{invoiceUpdateErr: errors.New("fail")}
-	svc := NewFinanceService(repo, "x", nil)
+	svc := NewFinanceService(repo, "x", nil, nil)
 
 	body := `{"invoice_url":"https://pay.xendit.co/abc","status":"PENDING","expiry_date":"2024-01-01T00:00:00Z"}`
 	origTransport := http.DefaultTransport
@@ -272,7 +279,7 @@ func TestFinanceService_TopUpWallet_UpdateInvoiceError(t *testing.T) {
 
 func TestFinanceService_HandleWalletWebhook_Paid(t *testing.T) {
 	repo := &mockFinanceRepo{}
-	svc := NewFinanceService(repo, "x", nil)
+	svc := NewFinanceService(repo, "x", nil, nil)
 
 	txID := uuid.New()
 	repo.txByID = &models.Transaction{
@@ -301,7 +308,7 @@ func TestFinanceService_HandleWalletWebhook_Paid(t *testing.T) {
 
 func TestFinanceService_HandleWalletWebhook_InvalidJSON(t *testing.T) {
 	repo := &mockFinanceRepo{}
-	svc := NewFinanceService(repo, "x", nil)
+	svc := NewFinanceService(repo, "x", nil, nil)
 	if err := svc.HandleWalletWebhook(context.Background(), "INVOICE_CALLBACK", []byte("{bad json")); err == nil {
 		t.Fatalf("expected parse error")
 	}
@@ -309,7 +316,7 @@ func TestFinanceService_HandleWalletWebhook_InvalidJSON(t *testing.T) {
 
 func TestFinanceService_HandleWalletWebhook_InvalidExternalID(t *testing.T) {
 	repo := &mockFinanceRepo{}
-	svc := NewFinanceService(repo, "x", nil)
+	svc := NewFinanceService(repo, "x", nil, nil)
 	if err := svc.HandleWalletWebhook(context.Background(), "INVOICE_CALLBACK", []byte(`{"external_id":"bad","status":"PAID"}`)); err == nil {
 		t.Fatalf("expected invalid uuid error")
 	}
@@ -322,7 +329,7 @@ func TestFinanceService_HandleWalletWebhook_AlreadySuccess(t *testing.T) {
 			Payment: models.Payment{Status: "SUCCESS"},
 		},
 	}
-	svc := NewFinanceService(repo, "x", nil)
+	svc := NewFinanceService(repo, "x", nil, nil)
 	payload := `{"external_id":"` + repo.txByID.ID.String() + `","status":"PAID"}`
 	if err := svc.HandleWalletWebhook(context.Background(), "INVOICE_CALLBACK", []byte(payload)); err != nil {
 		t.Fatalf("expected nil when already success")
@@ -331,7 +338,7 @@ func TestFinanceService_HandleWalletWebhook_AlreadySuccess(t *testing.T) {
 
 func TestFinanceService_HandleWalletWebhook_Expired(t *testing.T) {
 	repo := &mockFinanceRepo{}
-	svc := NewFinanceService(repo, "x", nil)
+	svc := NewFinanceService(repo, "x", nil, nil)
 
 	txID := uuid.New()
 	repo.txByID = &models.Transaction{ID: txID, Payment: models.Payment{Status: "PENDING"}, Type: "DEPOSIT"}
@@ -348,7 +355,7 @@ func TestFinanceService_HandleWalletWebhook_Expired(t *testing.T) {
 
 func TestFinanceService_HandleWalletWebhook_UnknownStatus(t *testing.T) {
 	repo := &mockFinanceRepo{}
-	svc := NewFinanceService(repo, "x", nil)
+	svc := NewFinanceService(repo, "x", nil, nil)
 	txID := uuid.New()
 	payload := `{"external_id":"` + txID.String() + `","status":"PENDING"}`
 	if err := svc.HandleWalletWebhook(context.Background(), "INVOICE_CALLBACK", []byte(payload)); err != nil {
@@ -358,7 +365,7 @@ func TestFinanceService_HandleWalletWebhook_UnknownStatus(t *testing.T) {
 
 func TestFinanceService_CheckPaymentExpiry_Error(t *testing.T) {
 	repo := &mockFinanceRepo{pendingBeforeErr: errors.New("db")}
-	svc := NewFinanceService(repo, "x", nil)
+	svc := NewFinanceService(repo, "x", nil, nil)
 	if err := svc.CheckPaymentExpiry(context.Background()); err == nil {
 		t.Fatalf("expected error from repo")
 	}
@@ -371,7 +378,7 @@ func TestFinanceService_CheckPaymentExpiry(t *testing.T) {
 			{ID: uuid.New(), Type: "DEPOSIT"},
 		},
 	}
-	svc := NewFinanceService(repo, "x", nil)
+	svc := NewFinanceService(repo, "x", nil, nil)
 
 	if err := svc.CheckPaymentExpiry(context.Background()); err != nil {
 		t.Fatalf("CheckPaymentExpiry() error = %v", err)
@@ -383,7 +390,7 @@ func TestFinanceService_CheckPaymentExpiry(t *testing.T) {
 
 func TestFinanceService_GetBalance(t *testing.T) {
 	repo := &mockFinanceRepo{getBalanceValue: 1234}
-	svc := NewFinanceService(repo, "x", nil)
+	svc := NewFinanceService(repo, "x", nil, nil)
 
 	uid := uuid.New()
 	bal, err := svc.GetBalance(context.Background(), uid)
@@ -402,7 +409,7 @@ func TestFinanceService_GetTransactionHistory(t *testing.T) {
 			{ID: uuid.New(), Amount: 20},
 		},
 	}
-	svc := NewFinanceService(repo, "x", nil)
+	svc := NewFinanceService(repo, "x", nil, nil)
 
 	uid := uuid.New()
 	txs, err := svc.GetTransactionHistory(context.Background(), uid)

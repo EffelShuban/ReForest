@@ -12,6 +12,7 @@ import (
 type FinanceRepository interface {
 	GetUserBalance(ctx context.Context, userID uuid.UUID) (int64, error)
 	UpdateWalletBalance(ctx context.Context, userID uuid.UUID, amount int64) error
+	GetUserEmailAndBalance(ctx context.Context, userID uuid.UUID) (string, int64, error)
 
 	CreateTransaction(ctx context.Context, tx *models.Transaction) error
 	GetTransactionByID(ctx context.Context, id uuid.UUID) (*models.Transaction, error)
@@ -33,6 +34,20 @@ func (r *financeRepository) GetUserBalance(ctx context.Context, userID uuid.UUID
 	var profile models.Profile
 	err := r.db.WithContext(ctx).Select("balance").Where("id = ?", userID).First(&profile).Error
 	return profile.Balance, err
+}
+
+func (r *financeRepository) GetUserEmailAndBalance(ctx context.Context, userID uuid.UUID) (string, int64, error) {
+	var res struct {
+		Email   string
+		Balance int64
+	}
+	err := r.db.WithContext(ctx).
+		Table("users").
+		Select("users.email, profiles.balance").
+		Joins("JOIN profiles ON profiles.id = users.id").
+		Where("users.id = ?", userID).
+		Scan(&res).Error
+	return res.Email, res.Balance, err
 }
 
 func (r *financeRepository) UpdateWalletBalance(ctx context.Context, userID uuid.UUID, amount int64) error {
