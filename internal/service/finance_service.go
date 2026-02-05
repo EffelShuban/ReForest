@@ -30,6 +30,7 @@ type financeService struct {
 	repo         repository.FinanceRepository
 	xenditAPIKey string
 	mqClient     *mq.Client
+	emailSender  EmailSender
 }
 
 type xenditInvoiceRequest struct {
@@ -46,11 +47,12 @@ type xenditInvoiceResponse struct {
 	ExpiryDate string `json:"expiry_date"`
 }
 
-func NewFinanceService(repo repository.FinanceRepository, xenditAPIKey string, mqClient *mq.Client) FinanceService {
+func NewFinanceService(repo repository.FinanceRepository, xenditAPIKey string, mqClient *mq.Client, emailSender EmailSender) FinanceService {
 	return &financeService{
 		repo:         repo,
 		xenditAPIKey: xenditAPIKey,
 		mqClient:     mqClient,
+		emailSender:  emailSender,
 	}
 }
 
@@ -87,6 +89,7 @@ func (s *financeService) CreateTransaction(ctx context.Context, req *pb.Transact
 				return nil, fmt.Errorf("failed to update wallet balance for adoption: %w", err)
 			}
 
+			// Publish success event immediately
 			_ = s.mqClient.Publish(ctx, "payment.success", map[string]string{"reference_id": tx.ReferenceID})
 
 			return tx, nil
@@ -102,7 +105,25 @@ func (s *financeService) CreateTransaction(ctx context.Context, req *pb.Transact
 }
 
 func (s *financeService) TopUpWallet(ctx context.Context, userID uuid.UUID, amount int64, duration int32) (*models.Transaction, error) {
-	return s.createInvoiceTransaction(ctx, userID, amount, "DEPOSIT", "", int(duration))
+	tx, err := s.createInvoiceTransaction(ctx, userID, amount, "DEPOSIT", "", int(duration))
+	if err != nil {
+		return nil, err
+	}
+
+	if s.emailSender != nil {
+		email, currentBalance, err := s.repo.GetUserEmailAndBalance(ctx, userID)
+		if err != nil {
+			log.Printf("WARN: failed to fetch user email/balance for top up notification: %v", err)
+		} else {
+			total := currentBalance + amount
+			body := fmt.Sprintf("Selamat!\nSaldo kamu bertambah %d.\nTotal saldo kamu sekarang: %d", amount, total)
+			if err := s.emailSender.Send(email, "Top Up Wallet", body); err != nil {
+				log.Printf("WARN: failed to send top up email to %s: %v", email, err)
+			}
+		}
+	}
+
+	return tx, nil
 }
 
 func (s *financeService) createInvoiceTransaction(ctx context.Context, userID uuid.UUID, amount int64, txType string, refID string, duration int) (*models.Transaction, error) {
@@ -112,9 +133,9 @@ func (s *financeService) createInvoiceTransaction(ctx context.Context, userID uu
 	}
 
 	tx := &models.Transaction{
-		UserID:    userID,
-		Amount:    amount,
-		Type:      txType,
+		UserID:      userID,
+		Amount:      amount,
+		Type:        txType,
 		ReferenceID: refID,
 		Payment: models.Payment{
 			Amount:    amount,

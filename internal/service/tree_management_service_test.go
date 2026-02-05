@@ -216,6 +216,9 @@ func TestTreeService_AdoptTree_Success(t *testing.T) {
 			ID:    speciesID,
 			Price: 2500,
 		},
+		plot: &models.Plot{
+			ID: plotID,
+		},
 	}
 	mockFin := &mockFinanceClient{
 		txResp: &pb.Transaction{
@@ -446,6 +449,7 @@ func TestTreeService_CreateLog_SuccessAndInvalid(t *testing.T) {
 	repo := &mockTreeRepo{}
 	svc := NewTreeManagementService(repo, &mockFinanceClient{}, nil)
 
+	// invalid id
 	if _, err := svc.CreateLog(context.Background(), &pb.CreateLogRequest{AdoptedTreeId: "bad"}, "admin"); err != models.ErrInvalidInput {
 		t.Fatalf("expected invalid input")
 	}
@@ -481,6 +485,7 @@ func TestTreeService_GetLogs_UpdateLog_DeleteLog(t *testing.T) {
 		t.Fatalf("GetLogsByTreeID failed")
 	}
 
+	// invalid update
 	if _, err := svc.UpdateLog(context.Background(), primitive.NewObjectID(), &pb.LogEntry{AdoptedTreeId: "bad"}); err != models.ErrInvalidInput {
 		t.Fatalf("expected invalid input for update")
 	}

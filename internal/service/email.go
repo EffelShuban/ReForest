@@ -21,19 +21,39 @@ type MailtrapSender struct {
 	From     string
 }
 
-// sendMail is kept as a variable so tests can stub it without opening real network connections.
 var sendMail = smtp.SendMail
 
 func NewMailtrapSender(cfg *config.Config) *MailtrapSender {
 	if cfg == nil {
 		return nil
 	}
+	host := cfg.MailtrapHost
+	if host == "" {
+		host = "sandbox.smtp.mailtrap.io"
+	}
+	port := cfg.MailtrapPort
+	if port == "" {
+		port = "2525"
+	}
+	user := cfg.MailtrapUser
+	if user == "" {
+		user = "cf1903b0c87796"
+	}
+	pass := cfg.MailtrapPass
+	if pass == "" {
+		pass = "b3d1f53cc739d0"
+	}
+	from := cfg.MailtrapFrom
+	if from == "" {
+		from = "salmaa@example.com"
+	}
+
 	return &MailtrapSender{
-		Host:     cfg.MailtrapHost,
-		Port:     cfg.MailtrapPort,
-		Username: cfg.MailtrapUser,
-		Password: cfg.MailtrapPass,
-		From:     cfg.MailtrapFrom,
+		Host:     host,
+		Port:     port,
+		Username: user,
+		Password: pass,
+		From:     from,
 	}
 }
 
